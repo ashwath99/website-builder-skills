@@ -6,6 +6,16 @@ Built for **Claude Code**, **Cursor AI**, and **Codex**.
 
 ---
 
+## Media
+
+- **Guide**: [`docs/GUIDE.md`](docs/GUIDE.md)
+- **Deck (PDF)**: [`docs/website-builder-skills-presentation.pdf`](docs/website-builder-skills-presentation.pdf)
+- **Deck (PPTX download)**: [`docs/website-builder-skills-presentation.pptx`](docs/website-builder-skills-presentation.pptx)
+- **Infographic (PNG)**: [`infographics/website-builder-skills-infographics.png`](infographics/website-builder-skills-infographics.png)
+- **Video (MP4)**: [`video/website-builder-skills-cinematic-explanatory-video.mp4`](video/website-builder-skills-cinematic-explanatory-video.mp4)
+
+---
+
 ## How It Works
 
 The system uses three execution modes:
