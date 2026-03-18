@@ -12,7 +12,7 @@ Built for **Claude Code**, **Cursor AI**, and **Codex**.
 - **Deck (PDF)**: [`docs/website-builder-skills-presentation.pdf`](docs/website-builder-skills-presentation.pdf)
 - **Deck (PPTX download)**: [`docs/website-builder-skills-presentation.pptx`](docs/website-builder-skills-presentation.pptx)
 - **Infographic (PNG)**: [`infographics/website-builder-skills-infographics.png`](infographics/website-builder-skills-infographics.png)
-- **Video (MP4)**: [`video/website-builder-skills-cinematic-explanatory-video.mp4`](video/website-builder-skills-cinematic-explanatory-video.mp4)
+- **Video (MP4)**: [Release asset (`v0.1.0`)](https://github.com/ashwath99/website-builder-skills/releases/download/v0.1.0/website-builder-skills-cinematic-explanatory-video.mp4)
 
 ---
 
