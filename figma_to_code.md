@@ -1,9 +1,9 @@
 <!-- meta
 name: figma_to_code
 title: Figma to Code
-version: 3.0
+version: 4.0
 status: active
-purpose: Define the 4-phase pipeline for converting a Figma dev link into production-ready HTML/CSS/JS, including inspection, planning, generation, and self-review.
+purpose: Define the 4-phase pipeline for converting a Figma dev link into production-ready HTML/CSS/JS, using the remote Figma MCP server's read tools for inspection and the self-healing verification loop for output validation.
 owns:
   - Figma inspection workflow (dev link → extracted specs)
   - Spec extraction rules (what to capture from Figma)
@@ -11,6 +11,7 @@ owns:
   - Figma MCP tool mapping for reading/inspecting frames
   - 4-phase execution pipeline (inspect → plan → generate → self-review)
   - Code-from-Figma planning rules (how Figma layers map to HTML structure)
+  - generate_figma_design intake workflow (HTML-origin frames)
 requires:
   - workflow
   - design_guide
@@ -26,7 +27,7 @@ modes:
   mode_b: required
   mode_c: not_used
 layer: figma
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Figma to Code — Inspection & Conversion Pipeline
@@ -46,32 +47,67 @@ Before starting the Figma-to-Code pipeline, the agent must have:
 
 | Input | Source | Required |
 |---|---|---|
-| Figma dev link (with node ID) | User-specified in prompt | Yes |
+| Figma dev link (with node ID) or frame selected in desktop app | User-specified in prompt | Yes |
 | Product class prefix | User-specified in prompt | Yes |
 | Skill files loaded | `design_guide.md`, `components.md`, `html_structure.md`, `css_js_rules.md` | Yes |
-| MCP bridge running | `npx figma-developer-mcp` active | Yes |
+| Remote MCP server connected | `mcp.figma.com/mcp` authenticated | Yes |
 | Pre-exported assets (if any) | User-specified, in project assets folder | Optional |
+
+### MCP Server Setup
+
+The remote Figma MCP server is the default connection method. No local bridge or desktop app is required for link-based inspection.
+
+| Method | How It Works |
+|---|---|
+| **Remote server (recommended)** | Link-based — provide a Figma URL to extract context. Works from any MCP client. |
+| **Desktop server** | Selection-based — select a frame in the Figma desktop app and the agent reads the selection. Requires Figma desktop. |
+
+→ For setup instructions per agent: see `figma_capture.md` Section 1
 
 ---
 
 ## 2 — Figma MCP Tool Selection
 
-Use the most specific tool for each inspection task. Avoid `figma_get_file_data` (full file fetch) unless absolutely necessary — it's expensive in tokens.
+The tool set is smaller and more focused than v3.0. Three read tools cover all inspection needs, plus `use_figma` for any modifications during review.
 
-| Task | Preferred MCP Tool | Notes |
+### Read Tools
+
+| Tool | Purpose | Notes |
 |---|---|---|
-| Get frame specs + rendered image | `figma_get_component_for_development` | **Primary tool** — gives layout, spacing, colors, and a rendered image in one call |
-| Take screenshot of a specific node | `figma_capture_screenshot` | For visual reference of individual sections |
-| Take screenshot via REST API | `figma_take_screenshot` | Alternative when plugin-based capture isn't available |
-| Get design tokens / variables | `figma_get_variables` | For extracting Figma variables as tokens |
-| Browse tokens interactively | `figma_browse_tokens` | For exploring token structure |
-| Get component variant details | `figma_get_component_details` | For inspecting component properties and variants |
-| Get component rendered image | `figma_get_component_image` | For exporting specific components as images |
-| Get full file structure | `figma_get_file_data` | **Last resort** — only when frame hierarchy needs full traversal |
-| Get styles (colors, text, effects) | `figma_get_styles` | For extracting named styles |
-| Check connection status | `figma_get_status` | Verify bridge before starting |
+| `Figma:get_design_context` | **Primary inspection tool** — returns structured representation of a frame including layout, spacing, colors, typography, component references, and a screenshot | Replaces `figma_get_component_for_development`. Output is React + Tailwind by default; agent translates to vanilla HTML/CSS per skill file rules. Includes style bindings where present. |
+| `Figma:search_design_system` | Find components, variables, and styles across connected libraries by text query | Replaces `figma_search_components`, `figma_get_component_details`. Use to identify which library components were used in the frame. |
+| `Figma:use_figma` (read mode) | Extract variables, styles, and detailed token values via Plugin API scripts | Replaces `figma_get_variables`, `figma_get_styles`, `figma_browse_tokens`. Use the variable extraction script from the Master Reference when you need CSS-formatted token values. |
 
-**Priority order:** Always try `figma_get_component_for_development` first. It returns the most useful data per call. Fall back to more specific tools only for details it doesn't cover.
+### Write Tool (for review fixes)
+
+| Tool | Purpose | Notes |
+|---|---|---|
+| `use_figma` | Modify the Figma frame during self-review if discrepancies are found between frame and generated code | Requires `/figma-use` skill. Used only in Phase 4 if the agent needs to annotate or flag issues back in Figma. |
+
+### Code-to-Canvas Tool
+
+| Tool | Purpose | Notes |
+|---|---|---|
+| `generate_figma_design` | Push generated HTML back into Figma as editable layers for visual comparison | Optional — useful for comparing generated code output against the original frame side-by-side. |
+
+### Deprecated Tools (v3.0 → v4.0)
+
+These individual tools are no longer needed. Their functionality is consolidated into the tools above.
+
+| Deprecated Tool | Replaced By |
+|---|---|
+| `figma_get_component_for_development` | `Figma:get_design_context` |
+| `figma_capture_screenshot` | `Figma:use_figma` (`node.exportAsync()`) |
+| `figma_take_screenshot` | `Figma:use_figma` (`node.exportAsync()`) |
+| `figma_get_variables` | `Figma:use_figma` (Plugin API variable read script — see Master Reference) |
+| `figma_browse_tokens` | `Figma:use_figma` (Plugin API variable read script) |
+| `figma_get_component_details` | `Figma:search_design_system` |
+| `figma_get_component_image` | `Figma:use_figma` (`node.exportAsync()`) |
+| `figma_get_file_data` | `Figma:get_design_context` (scoped to frame) |
+| `figma_get_styles` | `Figma:use_figma` (`figma.getLocalPaintStyles()`, etc.) |
+| `figma_get_status` | MCP connection verified at session start |
+
+**Priority order:** Start with `get_design_context` — it returns the most useful data per call. Use `get_variable_defs` for detailed token extraction. Use `search_design_system` to identify library components used in the frame.
 
 ---
 
@@ -80,62 +116,96 @@ Use the most specific tool for each inspection task. Avoid `figma_get_file_data`
 **Goal:** Extract all design specifications from the Figma frame.
 
 ### Step 1: Verify Connection and Load Frame
+
 ```
-Call figma_get_status → confirm bridge
-Call figma_get_component_for_development with the dev link node ID
-→ Returns: layout specs, spacing, colors, typography, rendered image
+Confirm remote MCP server is connected
+Call get_design_context with the dev link node ID (or use desktop selection)
+→ Returns: structured layout representation, spacing, colors, typography, component references
 ```
 
-### Step 2: Extract Section Structure
+### Step 2: Extract Token Bindings
 
-Walk the frame's layer hierarchy and identify:
+```
+Call Figma:use_figma with the variable extraction script (see Master Reference)
+→ Returns: all local variables formatted as CSS custom properties
+  - Color variables (fills, strokes, text colors)
+  - Spacing variables (padding, gaps)
+  - Typography styles (font, size, weight, line-height)
+
+Alternatively, get_design_context includes style references in its output —
+use these for mapping when full variable extraction is not needed.
+```
+
+Map returned variable names to `design_guide.md` tokens. If Figma variables use different naming than the skill file tokens, create a mapping table for Phase 2.
+
+### Step 3: Identify Design System Components
+
+```
+Call search_design_system with component types found in the frame
+→ Returns: library components used, their properties, and variant configurations
+```
+
+Record which components are library instances (reusable) vs. local overrides (custom).
+
+### Step 4: Extract Section Structure
+
+From the `get_design_context` output, identify:
 
 | What to Capture | How to Identify |
 |---|---|
 | Section boundaries | Top-level child frames within the page frame |
-| Section types | Layer name prefixes (e.g., `Section: Hero`, `Section: Features`) |
-| Component types | Component instance names or layer prefixes from `figma_capture.md` naming convention |
+| Section types | Layer name prefixes (e.g., `Section: Hero`, `Section: Features`) or visual analysis |
+| Component types | Component instance names from `search_design_system` results or layer prefixes |
 | Section order | Top-to-bottom order of child frames |
-| Tinted sections | Background fill colors on section frames |
+| Tinted sections | Background fill colors / variable bindings on section frames |
 
-If the frame was not generated by Mode A (i.e., it's a manually designed frame), layer names may not follow the convention. In this case, the agent identifies sections by visual analysis: grouping, spacing gaps, and background changes.
+### Step 5: Extract Design Specs Per Section
 
-### Step 3: Extract Design Specs Per Section
-
-For each section, capture:
+For each section, capture from the `get_design_context` and `get_variable_defs` output:
 
 | Spec | What to Record |
 |---|---|
 | **Layout** | Column count, alignment, gap between items, content width |
-| **Spacing** | Padding (top, right, bottom, left), margins, gaps |
-| **Typography** | Font family, size, weight, line-height, color for each text element |
-| **Colors** | Background fills, text colors, border colors, CTA colors |
+| **Spacing** | Padding (top, right, bottom, left), margins, gaps — prefer variable names over raw values |
+| **Typography** | Font family, size, weight, line-height, color for each text element — prefer style references |
+| **Colors** | Background fills, text colors, border colors, CTA colors — prefer variable references |
 | **Shadows** | Box shadows on cards and elevated elements |
 | **Border radius** | Corner radius on cards, buttons, images |
 | **Images** | Image names, dimensions, aspect ratios, file format |
 | **Interactions** | Any prototype interactions (tabs, hover states) — infer JS behavior |
 
-### Step 4: Extract and Export Assets
+### Step 6: Extract and Export Assets
 
 **Check the project assets folder first.** The user may have pre-exported some assets.
 
-For remaining assets:
+For remaining assets, use `use_figma` to export:
 
-| Asset Type | Export Method | Format |
+| Asset Type | Export Format | Notes |
 |---|---|---|
-| Product screenshots | `figma_get_component_image` (PNG) | PNG, highest quality |
-| Icons | `figma_get_component_image` (SVG) | SVG preferred |
-| Illustrations | `figma_get_component_image` (PNG or SVG) | Based on complexity |
-| Logos | `figma_get_component_image` (SVG) | SVG preferred |
-| Hero images | `figma_get_component_image` (PNG/JPG) | Based on source |
+| Product screenshots | PNG, highest quality | Use `use_figma` export capability |
+| Icons | SVG preferred | Inline SVG when simple enough |
+| Illustrations | PNG or SVG based on complexity | SVG for flat illustrations, PNG for complex |
+| Logos | SVG preferred | Always SVG for crisp scaling |
+| Hero images | PNG/JPG based on source | JPG for photographic, PNG for graphic |
 
 **Compression rules:**
-- SVG: Run through optimization (remove unnecessary metadata, minify paths)
+- SVG: Remove unnecessary metadata, minify paths
 - PNG: Lossless compression — do not reduce quality
 - JPG: Quality 85–90%, progressive encoding
 - Target: Reduce file size without visible quality loss
 
 **Output:** All assets saved to `./assets/` folder in the project directory.
+
+### Handling Frames from generate_figma_design
+
+When Mode B receives a frame that was created via `generate_figma_design` (the C → HTML → Figma path), the layer structure will mirror rendered HTML rather than the structured naming convention from `figma_capture.md` Section 4.
+
+In this case:
+- Layer names may be HTML element names (`div`, `section`, `h1`) rather than type-prefixed labels
+- Auto-layout may not be present — layers may use absolute positioning
+- Variables may not be bound — colors and spacing may be raw values
+
+**Agent behavior:** Treat these frames the same as any non-standard frame (Section 7). Use visual analysis to identify sections and components. The `get_design_context` output still provides the structural data needed for code generation.
 
 ---
 
@@ -175,13 +245,17 @@ Map extracted Figma values to CSS custom properties:
 
 | Figma Value | CSS Custom Property Pattern |
 |---|---|
-| Fill colors | `--{product}-color-*` |
-| Text sizes | `--{product}-font-size-*` |
-| Spacing values | `--{product}-space-*` |
-| Shadows | `--{product}-shadow-*` |
-| Border radius | `--{product}-radius-*` |
+| Variable-bound colors | Use the variable name → `--{product}-color-*` |
+| Variable-bound spacing | Use the variable name → `--{product}-space-*` |
+| Unbound fill colors | Match to closest `design_guide.md` token → `--{product}-color-*` |
+| Unbound text sizes | Match to closest `design_guide.md` token → `--{product}-font-size-*` |
+| Unbound spacing | Match to closest `design_guide.md` token → `--{product}-space-*` |
+| Shadows | → `--{product}-shadow-*` |
+| Border radius | → `--{product}-radius-*` |
 
-Cross-reference extracted values with `design_guide.md` tokens. If a Figma value matches a defined token, use the token name. If it doesn't match any token, flag it as a potential deviation:
+**Variable-first approach (new in v4.0):** When `get_variable_defs` returns variable names bound to frame elements, use those names directly as the basis for CSS custom property naming. This is more reliable than matching raw pixel values to token tables.
+
+For unbound values that don't match any defined token, flag as a potential deviation:
 
 ```css
 /* TODO: This value (17px) doesn't match any token in design_guide.md.
@@ -221,6 +295,7 @@ Generate following all rules in `html_structure.md`:
 ### File 2: `styles.css`
 Generate following all rules in `css_js_rules.md`:
 - CSS custom properties block at `:root` level for all tokens
+- Variable-bound values from Figma map directly to custom property names
 - Desktop-first responsive approach
 - Media queries at 480px and 1024px breakpoints only
 - Tinted section classes using surface/border color pairs
@@ -240,9 +315,9 @@ Generate following all rules in `css_js_rules.md`:
 
 ## 6 — Phase 4: Self-Review
 
-**Goal:** Validate the generated code against all skill file rules before presenting to the user.
+**Goal:** Validate the generated code against both skill file rules and Figma source specs.
 
-### Checklist
+### 6.1 — Automated Checklist
 
 **HTML checks:**
 - [ ] Semantic structure: `<section>`, `<header>`, `<footer>`, `<nav>`, `<main>` used correctly
@@ -257,6 +332,7 @@ Generate following all rules in `css_js_rules.md`:
 **CSS checks:**
 - [ ] All design values are CSS custom properties — no hardcoded colors, sizes, or spacing
 - [ ] Custom property names follow `--{product}-*` pattern
+- [ ] Variable-bound Figma values map to matching custom property names
 - [ ] Desktop-first: base styles are desktop, media queries handle smaller screens
 - [ ] Only two breakpoints: 1024px and 480px
 - [ ] Tinted sections use matched surface/border pairs from `design_guide.md`
@@ -276,7 +352,22 @@ Generate following all rules in `css_js_rules.md`:
 - [ ] Layout (columns, alignment, gaps) matches Figma structure
 - [ ] Responsive behavior degrades gracefully (even if Figma only shows desktop)
 
-**Deviation log:**
+### 6.2 — Visual Comparison (Optional)
+
+When higher fidelity is required, use `generate_figma_design` to push the generated HTML back into Figma for side-by-side comparison:
+
+```
+1. Serve the generated HTML locally or in a preview environment
+2. Call generate_figma_design → creates editable Figma layers from the rendered HTML
+3. Place the generated layers next to the original frame in Figma
+4. Compare visually — spacing, alignment, color, typography
+5. Log discrepancies as deviations
+```
+
+This step is optional but recommended for high-stakes pages or when the original frame has complex layouts.
+
+### 6.3 — Deviation Log
+
 If any generated value doesn't match the Figma spec exactly, log it:
 
 ```markdown
@@ -294,21 +385,54 @@ Present this log to the user alongside the generated code.
 
 ## 7 — Handling Non-Standard Figma Frames
 
-Not all Figma frames follow the layer naming convention from `figma_capture.md` (e.g., frames designed manually or by other designers).
+Not all Figma frames follow the layer naming convention from `figma_capture.md` (e.g., frames designed manually, by other designers, or created via `generate_figma_design`).
 
 ### Recognition Strategy
 
 | If layers are... | Agent behavior |
 |---|---|
 | Named per `figma_capture.md` convention | Direct mapping — use prefixes to identify sections and components |
-| Named descriptively but non-standard | Infer section types from names + visual analysis |
-| Generic names (`Frame 1`, `Group 47`) | Visual analysis only — use spacing, grouping, and content to identify sections |
-| Flat structure (no section grouping) | Group by visual proximity and background changes, then treat each group as a section |
+| Named descriptively but non-standard | Infer section types from names + `get_design_context` structure |
+| Generic names (`Frame 1`, `Group 47`, `div`, `section`) | Rely on `get_design_context` structured output + visual analysis |
+| Flat structure (no section grouping) | Group by spacing gaps and background changes in the design context data |
+| Created via `generate_figma_design` | HTML-mirror structure — layer names may be element types; use visual analysis |
 
 ### Visual Analysis Fallbacks
 
-When layer names are not informative:
+When layer names are not informative, `get_design_context` still provides:
+- **Layout structure** — auto-layout direction, padding, gaps, alignment
+- **Component references** — which library components were instantiated
+- **Style bindings** — which variables are applied to which elements
+- **Hierarchy** — parent-child nesting that implies section boundaries
+
+Use this structured data first. Fall back to visual pattern matching only when the structured data is ambiguous:
 - **Section boundaries:** Look for vertical spacing gaps larger than component spacing, or background color changes
 - **Component types:** Match visual patterns (grid of cards = Feature Grid, alternating image-text = Feature Rows)
 - **Heading levels:** Largest text in a section = section heading, next largest = component headings
 - **CTA identification:** Colored button-shaped elements with short text labels
+
+---
+
+## 8 — Code Connect Integration (Optional)
+
+If the Figma design system uses Code Connect to map components to code implementations, the agent can leverage this for higher-quality output.
+
+### What Code Connect Provides
+
+Code Connect links Figma library components to their corresponding code implementations. When available, the agent receives:
+- **Code component path** — file location in the codebase
+- **Property mapping** — how Figma component properties map to code props
+- **Framework-specific code** — the exact code snippet for each component variant
+
+### How to Use in the Pipeline
+
+```
+1. During Phase 1 (Inspect), check if Code Connect mappings exist for identified components
+2. If mappings exist, use the code component references instead of generating from scratch
+3. In Phase 3 (Generate), import or reference the mapped code components
+4. Flag any components that have Figma instances but no Code Connect mapping
+```
+
+**Note:** ManageEngine's current pipeline generates vanilla HTML/CSS/JS, not framework components. Code Connect mappings are useful as a reference for correct property usage and naming, even if the output format differs from the connected code.
+
+→ For Code Connect setup: see Figma developer docs at `developers.figma.com/docs/figma-mcp-server/tools-and-prompts/`

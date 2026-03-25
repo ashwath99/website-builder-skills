@@ -2,6 +2,8 @@
 
 A practical guide to understanding, using, and extending the Website Builder Skill File System — a modular architecture that enables AI agents to convert marketing content briefs into Figma design frames and production-ready landing page code.
 
+> **Version:** 4.0 — See [CHANGELOG.md](../CHANGELOG.md) for what's new.
+
 ---
 
 ## Media
@@ -72,10 +74,12 @@ Skill files are organized in six layers. Each layer has a specific responsibilit
 ```
 CONTEXT LAYER
   workflow.md                    ← Read first. Always.
+  skill_usage_matrix.md          ← File inventory, MCP tool mapping
 
 DESIGN DECISION LAYER
   content_brief.md               ← How to parse a marketing brief
-  design_guide.md                ← Design tokens (colors, type, spacing)
+  design_guide.md                ← Design tokens (structure and rules)
+  design_system_prompt.md        ← Token values (fills all {PLACEHOLDER}s)
   components.md                  ← Component library
   layout_patterns.md             ← Page-level layout patterns
 
@@ -105,7 +109,9 @@ Example of the ownership split for design tokens:
 
 | What | Where it's defined | Where it's used |
 |---|---|---|
-| Primary CTA is `#E9142B` | `design_guide.md` | `css_js_rules.md`, `components.md`, `trend_adaptation.md` |
+| Token structure and rules | `design_guide.md` | All files that use tokens |
+| Token production values | `design_system_prompt.md` | `design_guide.md`, `components.md`, `css_js_rules.md` |
+| Primary CTA is `#E9142B` | `design_system_prompt.md` | `css_js_rules.md`, `components.md`, `trend_adaptation.md` |
 | CSS syntax is `--{product}-color-primary` | `css_js_rules.md` | `figma_to_code.md`, `trend_adaptation.md` |
 | CTA button HTML uses `{product}-btn--primary` class | `html_structure.md` | `css_js_rules.md` |
 
@@ -117,31 +123,34 @@ If you find the same instruction written in two files, delete it from the non-ow
 
 ### The metadata block
 
-Every skill file starts with a hidden HTML comment block containing structured metadata:
+Every skill file starts with a metadata block containing structured information:
 
-```html
-<!-- meta
-name: design_guide
-title: Design Guide
-version: 3.0
+```yaml
+---
+name: workflow
+title: "Workflow"
+version: 4.0
 status: active
-purpose: Define all design token values.
+purpose: >
+  Establish the execution pipeline, define modes, and specify
+  which skill files are read for each task.
 owns:
-  - Color palette
-  - Typography scale
-  - Spacing scale
-requires:
-  - workflow
+  - "Pipeline phases and sequencing"
+  - "Execution mode definitions (A, B, C)"
+requires: []
+depends_on: []
 modes:
   mode_a: required
   mode_b: required
   mode_c: required
-layer: design_decision
-last_updated: 2026-03-16
--->
+layer: context
+last_updated: 2026-03-25
+---
 ```
 
-This block is invisible in GitHub preview and VS Code preview, but readable in the code editor and parseable by AI agents. It tells the agent what each file does, what it owns, and when to load it — before reading a single line of the actual instructions.
+This block is parseable by AI agents. It tells the agent what each file does, what it owns, and when to load it — before reading a single line of the actual instructions.
+
+> **v4.0 note:** The metadata format has been standardized to YAML frontmatter (`---` delimiters) for all new/updated files. Some files may still use HTML comment format (`<!-- meta -->`) — both are equivalent.
 
 ### Why no numbered filenames
 
@@ -168,34 +177,45 @@ Content Brief
   → Classify audience
   → Select layout pattern (layout_patterns.md)
   → Map content to components (components.md)
-  → Apply design tokens (design_guide.md)
-  → Push to Figma via MCP (figma_capture.md)
+  → Apply design tokens (design_guide.md + design_system_prompt.md)
+  → Search design system for reusable components (search_design_system)
+  → Push to Figma via use_figma (figma_capture.md)
+  → Self-healing verification loop (screenshot → compare → fix, max 3 iterations)
 ```
 
 **When to use:** When you need a visual design review before code is written. The agent generates a complete Figma frame that you can inspect, adjust, and share with stakeholders before proceeding to code.
 
-**Skill files loaded:** `workflow.md`, `content_brief.md`, `design_guide.md`, `components.md`, `layout_patterns.md`, `figma_capture.md`, `agent_execution_prompt.md`
+**v4.0 additions:**
+- The agent searches your connected design system for existing library components before creating anything from scratch.
+- After generation, the self-healing loop automatically screenshots, compares against the spec, and fixes mismatches — up to 3 iterations.
+
+**Skill files loaded:** `workflow.md`, `design_system_prompt.md`, `content_brief.md`, `design_guide.md`, `components.md`, `layout_patterns.md`, `figma_capture.md`, `agent_execution_prompt.md`
 
 ### Mode B: Figma → Code
 
-**Input:** A Figma dev link (with node ID)
+**Input:** A Figma dev link (with node ID) or selected frame
 **Output:** `index.html`, `styles.css`, `script.js`
 
 ```
 Figma Dev Link
-  → Inspect frame via MCP (figma_to_code.md)
-  → Extract specs (layout, spacing, colors, type)
+  → Inspect frame via get_design_context (figma_to_code.md)
+  → Extract token bindings via use_figma (variable-first approach)
+  → Identify design system components via search_design_system
   → Export and compress assets
   → Generate HTML (html_structure.md)
   → Generate CSS/JS (css_js_rules.md)
-  → Self-review
+  → Self-review + optional visual comparison via generate_figma_design
 ```
 
 **When to use:** When a finalized Figma frame exists — whether it came from Mode A, was designed manually, or is an existing page being rebuilt.
 
 **Critical rule:** The Figma dev link is the sole source of truth. If you ran Mode A, then made manual corrections in Figma, Mode B reads only the corrected frame — it doesn't carry over any decisions from the Mode A session.
 
-**Skill files loaded:** `workflow.md`, `design_guide.md`, `components.md`, `figma_to_code.md`, `html_structure.md`, `css_js_rules.md`, `agent_execution_prompt.md`
+**v4.0 additions:**
+- **Variable-first token mapping:** When Figma variables are bound to frame elements, the agent uses those variable names directly as the basis for CSS custom property naming — no more pixel-to-token guessing.
+- **Optional visual comparison:** The agent can push generated HTML back to Figma via `generate_figma_design` for side-by-side comparison.
+
+**Skill files loaded:** `workflow.md`, `design_system_prompt.md`, `design_guide.md`, `components.md`, `figma_to_code.md`, `html_structure.md`, `css_js_rules.md`, `agent_execution_prompt.md`
 
 ### Mode C: Brief → Code
 
@@ -206,7 +226,7 @@ Figma Dev Link
 Content Brief
   → Parse brief (content_brief.md)
   → Select layout + map components
-  → Apply tokens (design_guide.md)
+  → Apply tokens (design_guide.md + design_system_prompt.md)
   → Write Page Blueprint
   → Generate HTML/CSS/JS
   → Self-review
@@ -216,7 +236,7 @@ Content Brief
 
 **Key difference:** Mode C produces a **Page Blueprint** (`{product}-blueprint.md`) — a markdown file that records all design decisions. This is the text equivalent of a Figma frame. It survives session resets, can be edited manually, and serves as the persistent source of truth during iteration.
 
-**Skill files loaded:** `workflow.md`, `content_brief.md`, `design_guide.md`, `components.md`, `layout_patterns.md`, `html_structure.md`, `css_js_rules.md`, `agent_execution_prompt.md`
+**Skill files loaded:** `workflow.md`, `design_system_prompt.md`, `content_brief.md`, `design_guide.md`, `components.md`, `layout_patterns.md`, `html_structure.md`, `css_js_rules.md`, `agent_execution_prompt.md`
 
 ### Combined workflows
 
@@ -226,7 +246,9 @@ Modes can be chained:
 |---|---|---|
 | **A → correct → B** | Generate Figma frame, edit manually, generate code from corrected frame | High-stakes pages, stakeholder sign-off needed |
 | **C → iterate** | Generate code + blueprint, review in browser, iterate | Everyday landing pages |
-| **C → A** | Generate code + blueprint, then push blueprint to Figma for visual review | When you want both speed and a Figma deliverable |
+| **C → A (structured)** | Push blueprint to Figma via `use_figma` with proper layer naming and auto-layout | When you want a proper Figma deliverable from a code draft |
+| **C → Figma (quick visual)** | Push generated HTML to Figma via `generate_figma_design` for fast visual review | Quick visual check without full Figma structure |
+| **C → Figma → correct → B** | Quick visual in Figma, manual corrections, then code from corrected frame | Rapid iteration with visual QA |
 | **C → A → correct → B** | Full loop from quick draft to polished output | Complex pages that need everything |
 
 ### Token cost comparison
@@ -237,6 +259,7 @@ Modes can be chained:
 | Mode C (no iteration) | Lowest (~0.5×) | Skill files loaded once, no Figma MCP |
 | Mode C + 3–4 iterations | Medium (~0.7×) | Partial context reloads per iteration |
 | Mode C → A | Medium-High (~0.8×) | Adds Figma generation but skips decision-making phase |
+| Mode C → Figma (quick) | Low-Medium (~0.6×) | Single `generate_figma_design` call, no structured build |
 
 **Biggest token expense:** Skill file loading. Every new session reads 5–7 markdown files into context. Keep sessions alive for multiple tasks when possible.
 
@@ -247,7 +270,7 @@ Modes can be chained:
 ### Prerequisites
 
 - An AI coding agent: **Claude Code**, **Cursor AI**, or **Codex**
-- For Figma modes (A and B): Figma Desktop with the MCP bridge running (`npx figma-developer-mcp`)
+- For Figma modes (A and B): The Figma MCP plugin installed (remote server at `mcp.figma.com/mcp`)
 - A marketing content brief (text file with page content)
 - The skill files from this repository
 
@@ -259,11 +282,27 @@ git clone https://github.com/ashwath99/website-builder-skills.git
 
 ### Step 2: Fill in your design tokens
 
-Open `design_guide.md` and replace all `{PLACEHOLDER}` values with your production design tokens — colors, font sizes, spacing values, shadows, radii.
+Open `design_system_prompt.md` and replace all `{PLACEHOLDER}` values with your production design tokens — colors, font sizes, spacing values, shadows, radii.
 
-This is the only file that requires customization before first use. All other files reference these tokens.
+This is the only file that requires customization before first use. You can create per-product token files (e.g., `msp-design-tokens.md`, `edr-design-tokens.md`) following the same format. The core skill files remain unchanged.
 
-### Step 3: Choose your mode
+> **v3 → v4 migration note:** Token values previously went directly into `design_guide.md`. In v4, `design_guide.md` defines the token structure and rules, while `design_system_prompt.md` holds the actual values. This means you no longer need to edit `design_guide.md` when switching products.
+
+### Step 3: Set up Figma MCP (if using Modes A or B)
+
+Install the Figma plugin for your agent:
+
+| Agent | Setup |
+|---|---|
+| **Claude Code** | Install the Figma plugin — it bundles MCP server config + foundational skills automatically |
+| **Cursor AI** | Install the Figma plugin via agent chat |
+| **Codex** | `codex mcp add figma --url https://mcp.figma.com/mcp` |
+
+The plugin provides the `/figma-use` foundational skill. Always invoke this skill before calling `use_figma`.
+
+> **v3 → v4 migration note:** The local desktop bridge (`npx figma-developer-mcp`) is no longer required. All Figma operations use the official remote MCP plugin.
+
+### Step 4: Choose your mode
 
 Decide based on your situation:
 
@@ -271,7 +310,7 @@ Decide based on your situation:
 - **I have a finalized Figma design and need production code** → Mode B
 - **I have a content brief and want code fast** → Mode C
 
-### Step 4: Write your prompt
+### Step 5: Write your prompt
 
 Every prompt starts with a shared preamble that tells the agent to read the skill files:
 
@@ -280,6 +319,7 @@ I am a UX designer.
 
 Read the skill files in the project folder:
 - workflow.md
+- design_system_prompt.md
 - content_brief.md
 - design_guide.md
 - components.md
@@ -292,7 +332,7 @@ Product class prefix: {product}
 
 Then add the mode-specific instructions. Full prompt templates for every mode are in `agent_execution_prompt.md`.
 
-### Step 5: Run and review
+### Step 6: Run and review
 
 Run the prompt. The agent reads the skill files, processes your input, and generates output. Review, iterate, and proceed to the next mode if needed.
 
@@ -412,20 +452,29 @@ Mode C has no Figma frame. Without the blueprint, all design decisions would exi
 | **Iteration** | Agent updates blueprint first, then modifies code to match |
 | **Session reset** | Point agent to blueprint file — it reads and continues from where you left off |
 | **Manual edits** | You edit the markdown directly — agent respects your changes |
-| **Escalation to Figma** | Feed blueprint into Mode A as a pre-decided spec — agent renders it without re-deciding |
+| **Escalation to Figma (structured)** | Feed blueprint into `use_figma` — agent renders it with proper layer naming and auto-layout |
+| **Escalation to Figma (quick visual)** | Feed generated HTML into `generate_figma_design` for fast visual review |
 
 ### Escalation paths
 
-**Blueprint → Figma (C → A):**
+**Blueprint → Figma structured build (C → A):**
 ```
 Read the page blueprint: msp-blueprint.md
 Do not re-analyze or re-decide layout.
 The blueprint is the finalized design spec — generate a Figma frame
-that matches it exactly.
+that matches it exactly using use_figma with proper layer naming
+and auto-layout per figma_capture.md Section 4–5.
+```
+
+**HTML → Figma quick visual (C → Figma):**
+```
+Push the generated HTML to Figma using generate_figma_design
+for visual review. This creates a rendered frame — layer names
+will mirror HTML elements, not Section 4 naming convention.
 ```
 
 **Full loop (C → A → correct → B):**
-Mode C draft → iterate on blueprint → push to Figma → manual corrections → Mode B for final code.
+Mode C draft → iterate on blueprint → push to Figma (structured) → manual corrections → Mode B for final code.
 
 ---
 
@@ -441,10 +490,31 @@ Mode C draft → iterate on blueprint → push to Figma → manual corrections �
 
 All three are interchangeable across all modes and pipeline stages. The same prompt templates work across all of them.
 
+### Figma MCP setup (v4.0)
+
+All agents now use the official remote Figma MCP plugin at `mcp.figma.com/mcp`. No local desktop bridge needed.
+
+| Agent | Setup command |
+|---|---|
+| **Claude Code** | Install Figma plugin (bundles MCP config + skills) |
+| **Cursor AI** | Install Figma plugin via agent chat |
+| **Codex** | `codex mcp add figma --url https://mcp.figma.com/mcp` |
+
+**Available tools:**
+
+| Tool | Direction | Purpose |
+|---|---|---|
+| `use_figma` | Write | Execute Plugin API JavaScript on the Figma canvas |
+| `get_design_context` | Read | Retrieve design specs, properties, and screenshots from a frame |
+| `search_design_system` | Search | Find components and styles in the connected design system |
+| `generate_figma_design` | Code → Canvas | Push HTML to Figma as a rendered frame |
+
+Always invoke the `/figma-use` foundational skill before calling `use_figma`.
+
 ### Agent-specific tips
 
 **Claude Code:**
-- Ensure `npx figma-developer-mcp` is running before Modes A or B
+- Install the Figma plugin for MCP access
 - Long pipeline runs may approach context limits — split into separate sessions if needed
 - Can run asset compression commands directly (`svgo`, `imagemin`)
 
@@ -455,7 +525,7 @@ All three are interchangeable across all modes and pipeline stages. The same pro
 
 **Codex:**
 - If the agent stalls between phases, break the prompt into per-phase instructions
-- Verify MCP bridge compatibility before Figma operations
+- Verify MCP connection before Figma operations
 
 ### Token efficiency tips
 
@@ -463,6 +533,7 @@ All three are interchangeable across all modes and pipeline stages. The same pro
 2. **Keep sessions alive.** Skill file loading is the biggest single expense. Iterate within the same session rather than starting fresh.
 3. **Use the required files list.** Each mode's skill file list tells you exactly what to load. Don't load files the mode doesn't need.
 4. **Mode B doesn't need brief parsing files.** Mode A doesn't need code generation files. The mode matrix prevents unnecessary loading.
+5. **Use C → Figma (quick visual) for fast checks.** A single `generate_figma_design` call is cheaper than a full C → A structured build.
 
 ---
 
@@ -479,7 +550,7 @@ All three are interchangeable across all modes and pipeline stages. The same pro
 4. If the component maps to a section type, add it to the section-to-component table in `components.md`
 5. If it should be available as a variation axis option, add it to the relevant axis in `variation_generator.md`
 
-**Do not** add token values — those belong in `design_guide.md`.
+**Do not** add token values — those belong in `design_system_prompt.md` (values) or `design_guide.md` (structure/rules).
 
 ### Adding a new layout pattern
 
@@ -506,7 +577,11 @@ All three are interchangeable across all modes and pipeline stages. The same pro
 
 ### Updating design tokens
 
-Only edit `design_guide.md`. Every other file references these tokens — they'll pick up the new values automatically. Never hardcode a token value in any other file.
+Only edit `design_system_prompt.md` for token values. Only edit `design_guide.md` for token structure and rules. Every other file references these tokens — they'll pick up the new values automatically. Never hardcode a token value in any other file.
+
+### Creating per-product token files
+
+Copy `design_system_prompt.md` and rename it (e.g., `msp-design-tokens.md`, `edr-design-tokens.md`). Fill in the product-specific values. Point the agent to the correct token file in your prompt preamble.
 
 ---
 
@@ -514,7 +589,7 @@ Only edit `design_guide.md`. Every other file references these tokens — they'l
 
 ### Pattern 1: Start with Mode C, escalate if needed
 
-For most landing pages, Mode C is the fastest path. Generate code, review in browser, iterate. If the page turns out to be more complex than expected, escalate the blueprint to Figma (C → A) rather than starting over with Mode A.
+For most landing pages, Mode C is the fastest path. Generate code, review in browser, iterate. If the page turns out to be more complex than expected, escalate to Figma — either via quick visual (`generate_figma_design`) for a fast check, or structured build (`use_figma`) for a full Figma deliverable.
 
 ### Pattern 2: Use trend adaptation for competitive positioning
 
@@ -532,9 +607,13 @@ Even if you don't use Mode C for code generation, the blueprint format is useful
 
 When running A → correct → B, always start Mode B in a new session. This guarantees the agent reads the Figma frame fresh without carrying over Mode A assumptions. Your manual corrections will be respected fully.
 
-### Pattern 6: Keep the design guide as the single token source
+### Pattern 6: Leverage design system reuse
 
-When you update a color, font size, or spacing value, update it in `design_guide.md` only. If you notice the same value written in another file, that's a duplication bug — delete it from the non-owner and add a cross-reference instead.
+Before creating custom components in Figma (Mode A), the agent searches your connected design system via `search_design_system`. This keeps frames consistent with your existing library and reduces manual cleanup. If you maintain a robust Figma component library, this pattern becomes increasingly valuable.
+
+### Pattern 7: Use quick visual for rapid iteration
+
+During Mode C iteration, push your generated HTML to Figma via `generate_figma_design` after each major change. This gives you a quick visual check without the overhead of a full structured Figma build.
 
 ---
 
@@ -545,7 +624,7 @@ When you update a color, font size, or spacing value, update it in `design_guide
 **Symptom:** Output uses wrong class names, hardcoded colors, or incorrect breakpoints.
 
 **Causes and fixes:**
-- **Skill files not loaded:** Check that the prompt preamble lists all required files for the active mode
+- **Skill files not loaded:** Check that the prompt preamble lists all required files for the active mode (including `design_system_prompt.md`)
 - **Too many files loaded:** Loading unnecessary files dilutes attention. Use only the files listed for the active mode
 - **Instructions buried:** Critical rules should be near the top of each file. If the agent ignores a rule, check its position — move important instructions up
 - **Session too long:** After many iterations, the agent may lose track of early instructions. Start a fresh session and reload skill files
@@ -586,19 +665,23 @@ When you update a color, font size, or spacing value, update it in `design_guide
 
 **Symptom:** CSS output contains `{PLACEHOLDER}` instead of actual values.
 
-**Cause:** `design_guide.md` hasn't been filled in with production token values.
+**Cause:** `design_system_prompt.md` hasn't been filled in with production token values.
 
-**Fix:** Open `design_guide.md` and replace all `{PLACEHOLDER}` entries with your actual design system values. This is a one-time setup step.
+**Fix:** Open `design_system_prompt.md` and replace all `{PLACEHOLDER}` entries with your actual design system values. This is a one-time setup step per product.
+
+> **v3 → v4 migration note:** If you previously filled placeholders directly in `design_guide.md`, move those values to `design_system_prompt.md` instead.
 
 ### Figma MCP connection fails
 
 **Symptom:** Agent can't push to or read from Figma.
 
 **Checklist:**
-1. Is the MCP bridge running? (`npx figma-developer-mcp`)
-2. Is Figma Desktop open with the correct file?
-3. Run `figma_get_status` to check connection
-4. If using Cursor AI, ensure the bridge is accessible from the IDE environment
+1. Is the Figma plugin installed for your agent?
+2. Is the remote MCP server accessible? (Check `mcp.figma.com/mcp`)
+3. Is the `/figma-use` skill available? (Required before any `use_figma` call)
+4. For Mode B: Do you have a valid Figma dev link with a node ID?
+
+> **v3 → v4 migration note:** The local desktop bridge (`npx figma-developer-mcp`) is no longer needed. If you're still using it, switch to the official remote plugin.
 
 ---
 
@@ -608,18 +691,29 @@ When you update a color, font size, or spacing value, update it in `design_guide
 
 | File | One-line purpose |
 |---|---|
-| `workflow.md` | Pipeline modes, reading order, exploration layer |
+| `workflow.md` | Pipeline modes, MCP server setup, reading order |
+| `skill_usage_matrix.md` | File inventory, ownership table, MCP tool mapping |
 | `content_brief.md` | Parse briefs, identify sections, flag gaps |
-| `design_guide.md` | All design token values |
+| `design_guide.md` | Design token structure and rules |
+| `design_system_prompt.md` | Centralized token values (fills all `{PLACEHOLDER}`s) |
 | `components.md` | Component library with slots, variants, responsive behavior |
 | `layout_patterns.md` | Page layouts, section sequencing, grid system |
-| `figma_capture.md` | Push frames to Figma via MCP |
-| `figma_to_code.md` | Read frames from Figma, 4-phase code pipeline |
+| `figma_capture.md` | Push frames to Figma via `use_figma`, self-healing loop |
+| `figma_to_code.md` | Read frames via `get_design_context`, variable-first mapping |
 | `html_structure.md` | Semantic HTML, BEM naming, accessibility |
 | `css_js_rules.md` | CSS custom properties, responsive, jQuery patterns |
 | `trend_adaptation.md` | 7 trend dimensions, 5 profiles, token overrides |
 | `variation_generator.md` | 6 variation axes, constraint filters, variant specs |
-| `agent_execution_prompt.md` | Prompt templates, blueprint format, validation checklists |
+| `agent_execution_prompt.md` | Prompt templates, blueprint format, escalation paths, validation |
+
+### Figma MCP tool reference (v4.0)
+
+| Tool | Direction | Purpose |
+|---|---|---|
+| `use_figma` | Write | Execute Plugin API JavaScript on the canvas |
+| `get_design_context` | Read | Retrieve specs, properties, screenshots |
+| `search_design_system` | Search | Find components and styles in design system |
+| `generate_figma_design` | Code → Canvas | Push HTML to Figma as rendered frame |
 
 ### Code output standards
 
@@ -648,6 +742,7 @@ When you update a color, font size, or spacing value, update it in `design_guide
 | File | Mode A | Mode B | Mode C |
 |---|---|---|---|
 | `workflow.md` | ✓ | ✓ | ✓ |
+| `design_system_prompt.md` | ✓ | ✓ | ✓ |
 | `content_brief.md` | ✓ | — | ✓ |
 | `design_guide.md` | ✓ | ✓ | ✓ |
 | `components.md` | ✓ | ✓ | ✓ |

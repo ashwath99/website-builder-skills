@@ -1,7 +1,7 @@
 <!-- meta
 name: css_js_rules
 title: CSS & JS Rules
-version: 3.0
+version: 4.0
 status: active
 purpose: Define all CSS and JavaScript output rules — custom property syntax, responsive implementation, file output format, jQuery interaction patterns, and code quality standards.
 owns:
@@ -23,6 +23,7 @@ depends_on:
   - html_structure
   - components
 referenced_by:
+  - design_system_prompt
   - figma_to_code
   - agent_execution_prompt
   - trend_adaptation
@@ -31,7 +32,7 @@ modes:
   mode_b: required
   mode_c: required
 layer: code_generation
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # CSS & JS Rules — Code Output Standards

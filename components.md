@@ -1,7 +1,7 @@
 <!-- meta
 name: components
 title: Components
-version: 3.0
+version: 4.0
 status: active
 purpose: Define the component library — every reusable UI block available for landing page construction, including content slots, configuration variants, and responsive behavior.
 owns:
@@ -17,6 +17,7 @@ requires:
 depends_on:
   - content_brief
 referenced_by:
+  - design_system_prompt
   - layout_patterns
   - variation_generator
   - html_structure
@@ -28,7 +29,7 @@ modes:
   mode_b: required
   mode_c: required
 layer: design_decision
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Components — UI Block Library

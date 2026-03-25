@@ -1,7 +1,7 @@
 <!-- meta
 name: content_brief
 title: Content Brief
-version: 3.0
+version: 4.0
 status: active
 purpose: Define how the agent parses a marketing content brief, identifies page sections, flags content gaps, and prepares structured input for downstream skill files.
 owns:
@@ -28,7 +28,7 @@ modes:
   mode_b: not_used
   mode_c: required
 layer: design_decision
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Content Brief — Parsing & Section Mapping

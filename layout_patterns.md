@@ -1,7 +1,7 @@
 <!-- meta
 name: layout_patterns
 title: Layout Patterns
-version: 3.0
+version: 4.0
 status: active
 purpose: Define page-level layout patterns — section sequencing, grid systems, content width rules, and pattern selection logic based on brief content and audience.
 owns:
@@ -19,6 +19,7 @@ requires:
 depends_on:
   - content_brief
 referenced_by:
+  - design_system_prompt
   - variation_generator
   - trend_adaptation
   - html_structure
@@ -29,7 +30,7 @@ modes:
   mode_b: optional
   mode_c: required
 layer: design_decision
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Layout Patterns — Page Structure

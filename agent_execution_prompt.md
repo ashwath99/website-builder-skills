@@ -1,9 +1,9 @@
 <!-- meta
 name: agent_execution_prompt
 title: Agent Execution Prompt
-version: 3.0
+version: 4.0
 status: active
-purpose: Master prompt templates for executing the landing page pipeline through AI coding agents, covering all three execution modes and agent-specific configurations.
+purpose: Master prompt templates for executing the landing page pipeline through AI coding agents, covering all three execution modes, remote Figma MCP server configuration, skills integration, and new combined workflows.
 owns:
   - Mode A/B/C prompt templates
   - Shared preamble format
@@ -12,7 +12,7 @@ owns:
   - Prompt modifiers (trend, variation, density, section focus)
   - Validation checklist (all modes)
   - Blueprint source-of-truth rules
-  - C → A escalation prompt
+  - C → A and C → Figma escalation prompts
   - Combined workflow guidance
 requires:
   - workflow
@@ -34,7 +34,7 @@ modes:
   mode_b: required
   mode_c: required
 layer: orchestration
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Agent Execution Prompt — Master Templates
@@ -50,14 +50,16 @@ This file contains prompt templates for all three execution modes across all sup
 
 | Mode | Pipeline | Input | Output | When to Use |
 |---|---|---|---|---|
-| **A: Brief → Figma** | Parse brief → select layout → map components → generate Figma frame | Content brief + skill files | Figma design frame | Design review needed before code |
-| **B: Figma → Code** | Inspect Figma → extract specs → generate production code | Figma dev link + skill files | `index.html`, `styles.css`, `script.js` | Finalized Figma frame exists |
+| **A: Brief → Figma** | Parse brief → select layout → map components → search design system → generate Figma frame → self-healing loop | Content brief + skill files | Figma design frame | Design review needed before code |
+| **B: Figma → Code** | Inspect Figma via `get_design_context` → extract specs → generate production code | Figma dev link + skill files | `index.html`, `styles.css`, `script.js` | Finalized Figma frame exists |
 | **C: Brief → Code** | Parse brief → select layout → map components → generate code directly | Content brief + skill files | Page Blueprint + `index.html`, `styles.css`, `script.js` | Speed matters, Figma review unnecessary |
 
 **Combined workflows:**
 - **A → correct → B:** Mode A, manual Figma edits, then Mode B against corrected frame
 - **C → iterate:** Mode C, review in browser, iterate on blueprint + code
-- **C → A:** Escalate Mode C blueprint into a Figma frame for visual review
+- **C → A (structured):** Escalate Mode C blueprint into a structured Figma frame via `use_figma`
+- **C → Figma (quick visual):** Push Mode C HTML into Figma as editable layers via `generate_figma_design`
+- **C → Figma → correct → B:** Quick visual to Figma, correct, then Mode B for final code
 - **C → A → correct → B:** Full loop from quick draft to polished output
 
 → Full workflow definitions: see `workflow.md`
@@ -100,6 +102,9 @@ Parse a marketing content brief and generate a complete landing page as a Figma 
 ### Required Skill Files
 `workflow.md`, `content_brief.md`, `design_guide.md`, `components.md`, `layout_patterns.md`, `figma_capture.md`
 
+### MCP Requirements
+Remote Figma MCP server connected (`mcp.figma.com/mcp`), `/figma-use` skill installed.
+
 ### Prompt Template
 
 ```
@@ -115,21 +120,28 @@ Using these skill files:
 2. Select the best layout pattern from layout_patterns.md for this content and audience
 3. Map each content section to components from components.md
 4. Apply design tokens from design_guide.md
+5. Search the connected design system for reusable components before creating new ones
 
-Generate the landing page as a Figma design frame using the MCP tools
-defined in figma_capture.md.
-Target Figma file: {figma-file-name} > page: {page-name}
+Generate the landing page as a Figma design frame using use_figma
+(invoke the /figma-use skill before each call).
+Target Figma file: {figma-file-url}
+
+Run the self-healing verification loop after generation:
+screenshot → compare against spec → fix mismatches → repeat (max 3 iterations).
 
 START — Deploy Figma design
 ```
 
 ### What the Agent Does
 1. Reads all referenced skill files
-2. Parses the content brief — identifies sections, flags gaps, classifies audience
-3. Selects a layout pattern — matches brief content to patterns in `layout_patterns.md`
-4. Maps content to components — assigns each section a component from `components.md`
-5. Resolves design tokens — applies values from `design_guide.md`
-6. Pushes the assembled frame to Figma via MCP following `figma_capture.md` rules
+2. Confirms MCP server connection and `/figma-use` skill availability
+3. Parses the content brief — identifies sections, flags gaps, classifies audience
+4. Selects a layout pattern — matches brief content to patterns in `layout_patterns.md`
+5. Maps content to components — assigns each section a component from `components.md`
+6. Searches design system for existing library components to reuse
+7. Resolves design tokens — applies values from `design_guide.md`, binds to Figma variables when available
+8. Pushes the assembled frame to Figma via `use_figma` following `figma_capture.md` rules
+9. Runs self-healing loop — screenshots, compares, fixes, re-screenshots until passing or max iterations
 
 ### Post-Execution
 - Review the generated Figma frame
@@ -145,6 +157,9 @@ Take a finalized Figma design and generate production-ready HTML/CSS/JS.
 
 ### Required Skill Files
 `workflow.md`, `design_guide.md`, `components.md`, `figma_to_code.md`, `html_structure.md`, `css_js_rules.md`
+
+### MCP Requirements
+Remote Figma MCP server connected.
 
 ### Critical Rule: Figma Link Is Sole Source of Truth
 If Mode B follows a Mode A run (with or without manual corrections), the agent MUST treat the Figma dev link as the only source of truth. Any design decisions, layout plans, or component mappings from a prior Mode A session (or earlier in the same session) are discarded. The agent inspects the frame fresh — what's in Figma is what gets built, nothing else.
@@ -169,30 +184,36 @@ Additional context:
 - Compress all assets without affecting visual quality
 
 Execute the Figma-to-Code pipeline defined in figma_to_code.md:
-Phase 1: Inspect — Extract specs from the Figma dev link
+Phase 1: Inspect — Extract specs using get_design_context; extract variables via use_figma Plugin API script
 Phase 2: Plan — Map Figma layers to HTML structure and CSS architecture
 Phase 3: Generate — Produce index.html, styles.css, script.js
 Phase 4: Self-review — Validate output against skill file rules
+
+Use variable names from get_design_context style references and use_figma
+variable extraction as the basis for CSS custom property naming where available.
 
 Output: 3 files in the project output folder
 START
 ```
 
 ### What the Agent Does
-1. Connects to Figma via MCP and inspects the dev link (fresh inspection — no prior assumptions)
-2. Extracts all design specs following `figma_to_code.md` Phase 1
-3. Identifies and exports missing assets, compresses all assets
-4. Plans HTML/CSS mapping following `figma_to_code.md` Phase 2
-5. Generates 3 files following `html_structure.md` and `css_js_rules.md`
-6. Self-reviews following `figma_to_code.md` Phase 4
+1. Connects to Figma via remote MCP server and inspects the dev link (fresh inspection — no prior assumptions)
+2. Extracts all design specs via `get_design_context` following `figma_to_code.md` Phase 1
+3. Extracts token values via `use_figma` Plugin API variable extraction script
+4. Identifies library components via `search_design_system`
+5. Identifies and exports missing assets, compresses all assets
+6. Plans HTML/CSS mapping following `figma_to_code.md` Phase 2
+7. Generates 3 files following `html_structure.md` and `css_js_rules.md`
+8. Self-reviews following `figma_to_code.md` Phase 4
+9. Optionally pushes generated HTML to Figma via `generate_figma_design` for visual comparison
 
 ### Asset Handling
 - Agent checks the project assets folder first for pre-exported files
-- Exports missing assets from Figma via MCP
+- Exports missing assets from Figma via `use_figma`
 - Compresses all assets (SVG optimization, PNG/JPG compression)
 - References as `./assets/{filename}` with TODO comments for uncertain mappings
 
-→ Full asset export rules: see `figma_to_code.md` Section 3, Step 4
+→ Full asset export rules: see `figma_to_code.md` Section 3, Step 6
 
 ---
 
@@ -203,6 +224,9 @@ Go directly from a content brief to production code, skipping Figma. Produces a 
 
 ### Required Skill Files
 `workflow.md`, `content_brief.md`, `design_guide.md`, `components.md`, `layout_patterns.md`, `html_structure.md`, `css_js_rules.md`
+
+### MCP Requirements
+None — Mode C does not touch Figma unless escalating.
 
 ### Prompt Template
 
@@ -330,7 +354,7 @@ Update the blueprint and regenerate the affected code files.
 
 ### Escalation Paths from Mode C
 
-**Path 1: Blueprint → Figma (C → A)**
+**Path 1: Blueprint → Figma Structured Build (C → A)**
 Feed the blueprint into Mode A as a pre-decided spec:
 
 ```
@@ -339,19 +363,43 @@ Read skill files: design_guide.md, components.md, layout_patterns.md, figma_capt
 
 Do not re-analyze or re-decide layout.
 The blueprint is the finalized design spec — generate a Figma frame
-that matches it exactly.
+that matches it exactly using use_figma.
 
-Target Figma file: {file} > page: {page}
+Search connected design system for reusable components first.
+Run the self-healing verification loop after generation.
+
+Target Figma file: {figma-file-url}
 START
 ```
 
 The agent skips brief-parsing and decision-making, acts purely as a renderer. Useful when:
 - You iterated in Mode C and now want a visual artifact
 - A stakeholder needs a Figma frame for review
-- You want Figma documentation for future reference
+- You want Figma documentation with structured layers and variable bindings
 
-**Path 2: Full Escalation (C → A → correct → B)**
-Run Mode C → iterate on blueprint + code → escalate blueprint to Figma (Path 1) → make manual corrections in Figma → run Mode B against corrected frame. Full loop from quick draft to polished output.
+**Path 2: HTML → Figma Quick Visual (C → Figma)**
+Push Mode C's rendered HTML directly into Figma:
+
+```
+The Mode C output (index.html + styles.css + script.js) is ready.
+
+Use generate_figma_design to push the rendered HTML into Figma
+as editable design layers.
+
+Target Figma file: {figma-file-url}
+START
+```
+
+Useful when:
+- You want a fast visual in Figma without building structured frames
+- The goal is quick stakeholder review, not extensive Figma editing
+- You plan to follow up with Mode B against the corrected frame
+
+**Path 3: Full Escalation (C → Figma → correct → B)**
+Run Mode C → push HTML to Figma via `generate_figma_design` → make manual corrections → run Mode B against corrected frame.
+
+**Path 4: Full Structured Escalation (C → A → correct → B)**
+Run Mode C → escalate blueprint to Figma via `use_figma` (Path 1) → make manual corrections → run Mode B against corrected frame. Full loop from quick draft to polished output.
 
 ---
 
@@ -359,14 +407,15 @@ Run Mode C → iterate on blueprint + code → escalate blueprint to Figma (Path
 
 ### Claude Code (Terminal Agent)
 - **File access:** Reads skill files directly from the project directory
-- **Figma MCP:** Connects via `npx figma-developer-mcp`; ensure bridge is running before Modes A or B
+- **Figma MCP:** Install Figma plugin — bundles MCP server config + foundational skills automatically
+- **Setup command:** Plugin installation is initiated from the Claude Code terminal
 - **Output:** Writes files directly to the specified output folder
 - **Strengths:** Full filesystem control, can run asset compression commands (`svgo`, `imagemin`), can chain operations
 - **Token note:** Long pipeline runs may approach context limits; if this happens, split into separate sessions per mode
 
 ### Cursor AI (IDE Agent)
 - **File access:** Reads skill files from the workspace/project folder open in the IDE
-- **Figma MCP:** Same bridge as Claude Code; ensure running and accessible
+- **Figma MCP:** Install Figma plugin via agent chat — bundles MCP server config + skills
 - **Output:** Creates/modifies files in the workspace; changes visible immediately
 - **Strengths:** Inline editing, easy iteration, visual diff
 - **Workspace tip:** Keep skill files in a `_skills/` folder to avoid clutter
@@ -374,9 +423,13 @@ Run Mode C → iterate on blueprint + code → escalate blueprint to Figma (Path
 
 ### Codex (CLI Agent)
 - **File access:** Reads from the project directory like Claude Code
-- **Figma MCP:** Verify bridge compatibility; may require explicit connection setup
+- **Figma MCP:** Run `codex mcp add figma --url https://mcp.figma.com/mcp` and authenticate
+- **Skills:** Install skills manually — download from Figma's mcp-server-guide repository and place in the project
 - **Output:** Writes files to specified output path
 - **Note:** If the agent stalls between phases, break the prompt into per-phase instructions
+
+### All Agents — Skills Setup
+The `/figma-use` foundational skill is **required** before any `use_figma` call. It contains Plugin API rules and script templates that prevent failures. When using the Figma plugin for Claude Code or Cursor, this skill is included automatically. For other agents, install manually from the Figma MCP server guide.
 
 ---
 
@@ -426,6 +479,13 @@ Generate only the following sections (not full page):
 Apply all skill file rules to these sections as if building the full page.
 ```
 
+### With Visual Comparison (Mode B)
+```
+After generating code, push the rendered HTML back into Figma using
+generate_figma_design for side-by-side comparison with the original frame.
+Log any visual discrepancies in the deviation report.
+```
+
 ---
 
 ## 8 — Validation Checklist (All Modes)
@@ -436,6 +496,7 @@ After any execution, the agent self-checks against this list.
 - [ ] Output is exactly 3 files: `index.html`, `styles.css`, `script.js`
 - [ ] All classes use BEM naming with `{product}-` prefix
 - [ ] All design tokens are CSS custom properties (no hardcoded values in rulesets)
+- [ ] Variable-bound Figma tokens map to matching CSS custom property names (Mode B — from get_design_context or use_figma extraction)
 - [ ] Primary CTA uses `#E9142B`
 - [ ] Headings use ZohoPuvi font family
 - [ ] Responsive breakpoints at 480px and 1024px only
@@ -455,12 +516,14 @@ After any execution, the agent self-checks against this list.
 → Full Figma-to-code review checklist: see `figma_to_code.md` Section 6
 
 ### Figma Output (Mode A)
-- [ ] Frame pushed to correct file and page
+- [ ] Frame pushed to correct file and page via `use_figma`
 - [ ] Layer naming follows convention from `figma_capture.md` Section 4
-- [ ] Design tokens match `design_guide.md`
+- [ ] Design tokens match `design_guide.md` — bound to Figma variables when available
+- [ ] Library components reused where possible (searched via `search_design_system`)
 - [ ] All text content from brief is present — nothing omitted
 - [ ] Content gaps flagged visually (red placeholders)
 - [ ] Tinted section alternation follows `layout_patterns.md` Section 2.2
+- [ ] Self-healing loop completed — verification summary included
 
 → Full Figma generation rules: see `figma_capture.md`
 
@@ -477,3 +540,4 @@ After any execution, the agent self-checks against this list.
 - [ ] Content brief was parsed and sections confirmed before design decisions
 - [ ] If trend or variation modifiers were applied, brand invariants still pass
 - [ ] Deviations from expected values are logged and presented to user
+- [ ] MCP server connection verified before any Figma operations

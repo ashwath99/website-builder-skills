@@ -1,7 +1,7 @@
 <!-- meta
 name: html_structure
 title: HTML Structure
-version: 3.0
+version: 4.0
 status: active
 purpose: Define all HTML generation rules — semantic structure, BEM class naming, section markup patterns, accessibility, and the product class prefix system.
 owns:
@@ -28,7 +28,7 @@ modes:
   mode_b: required
   mode_c: required
 layer: code_generation
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # HTML Structure — Markup Rules

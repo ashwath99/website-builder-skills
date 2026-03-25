@@ -1,16 +1,18 @@
 <!-- meta
 name: figma_capture
 title: Figma Capture
-version: 3.0
+version: 4.0
 status: active
-purpose: Define how the agent generates and pushes Figma design frames from design specs, including layer naming, frame structure, and MCP tool usage for frame creation.
+purpose: Define how the agent generates and pushes Figma design frames from design specs, including the use_figma tool workflow, layer naming, frame structure, skills integration, and self-healing verification loop.
 owns:
   - Figma frame generation workflow
   - Layer naming conventions for generated frames
   - Frame structure and hierarchy rules
-  - Figma MCP push workflow (brief/blueprint → Figma)
+  - Figma MCP write workflow (brief/blueprint → Figma)
   - Auto-layout and constraint rules for generated frames
   - Figma page and file targeting
+  - Self-healing verification loop (generate → screenshot → compare → fix)
+  - Skills integration for canvas writes
 requires:
   - workflow
   - design_guide
@@ -26,7 +28,7 @@ modes:
   mode_b: not_used
   mode_c: not_used
 layer: figma
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Figma Capture — Frame Generation
@@ -52,33 +54,55 @@ Before generating a Figma frame, the agent must have:
 | Design tokens | `design_guide.md` (with optional trend overrides) | Yes |
 | Target Figma file and page | User-specified in prompt | Yes |
 | Product class prefix | User-specified in prompt | Yes |
-| MCP bridge running | `npx figma-developer-mcp` active | Yes |
+| Remote MCP server connected | `mcp.figma.com/mcp` authenticated | Yes |
+| `/figma-use` skill installed | Foundational skill for canvas writes | Yes |
+
+### MCP Server Setup
+
+The remote Figma MCP server (`mcp.figma.com/mcp`) is the default connection method. No local bridge is required.
+
+| Agent | Setup |
+|---|---|
+| **Claude Code** | Install the Figma plugin: includes MCP server config + skills automatically |
+| **Cursor AI** | Install the Figma plugin via agent chat, or add MCP server manually in Settings → MCP |
+| **Codex** | Run `codex mcp add figma --url https://mcp.figma.com/mcp` and authenticate |
+
+**Verification:** At session start, confirm the MCP server is connected and the `/figma-use` skill is available before proceeding.
 
 ---
 
 ## 2 — Figma MCP Tool Selection
 
-Use the most specific tool for each task. Avoid broad file-level fetches when targeted tools exist.
+The new Figma MCP server consolidates write operations into a single unified tool. Use targeted tools only for specific read tasks.
 
-| Task | Preferred MCP Tool | Notes |
+### Primary Write Tool
+
+| Tool | Purpose | Notes |
 |---|---|---|
-| Push complete frame to Figma | `figma_execute` | Executes the frame generation script |
-| Create a new child node | `figma_create_child` | For building frame hierarchy |
-| Set text content on a node | `figma_set_text` | For populating text layers |
-| Set fill colors on a node | `figma_set_fills` | For applying color tokens |
-| Set image fill on a node | `figma_set_image_fill` | For hero images, screenshots |
-| Set strokes/borders on a node | `figma_set_strokes` | For card borders, dividers |
-| Resize a node | `figma_resize_node` | For adjusting dimensions |
-| Move a node within parent | `figma_move_node` | For positioning layers |
-| Rename a node | `figma_rename_node` | For correcting layer names |
-| Clone an existing node | `figma_clone_node` | For duplicating repeated components |
-| Get current selection | `figma_get_selection` | For inspecting what's selected |
-| Take screenshot of result | `figma_capture_screenshot` | For visual verification after generation |
-| Instantiate a library component | `figma_instantiate_component` | For using existing design system components |
-| Search for existing components | `figma_search_components` | For finding reusable components before creating new ones |
-| Check connection status | `figma_get_status` | Verify MCP bridge is connected before starting |
+| `use_figma` | **All write operations** — create, edit, delete, and inspect pages, frames, components, variants, variables, styles, text, and images | Always invoke the `/figma-use` skill before calling. Auto-searches connected design libraries for existing components before creating new ones. |
 
-**Rule:** Always check `figma_get_status` at the start of Mode A. If the bridge is not connected, stop and instruct the user to start it.
+### Read & Search Tools
+
+| Tool | Purpose | Notes |
+|---|---|---|
+| `search_design_system` | Find existing components, variables, and styles across connected libraries | Use before creating anything — reuse existing assets first |
+| `get_design_context` | Get structured representation of a frame or selection | Returns layout, spacing, colors, typography in one call |
+| `get_variable_defs` | Extract variables and styles used in a selection | For reading token values from existing frames |
+
+### Code-to-Canvas Tool
+
+| Tool | Purpose | Notes |
+|---|---|---|
+| `generate_figma_design` | Push live HTML into Figma as editable design layers | Used in C → Figma escalation path as an alternative to building frames from scratch |
+
+### Skills
+
+| Skill | Purpose | Required |
+|---|---|---|
+| `/figma-use` | Foundational skill — teaches the agent Plugin API rules, gotchas, and script templates | **Required before every `use_figma` call** |
+| Custom skills | Your team's conventions packaged as installable skills | Optional — enhances consistency |
+
+**Rule:** Always pass `skillNames` when calling `use_figma` for logging and workflow tracking.
 
 ---
 
@@ -188,9 +212,11 @@ All text from the parsed brief or blueprint is placed in the frame using actual 
 
 | Asset Type | Frame Treatment |
 |---|---|
-| Available (from brief attachments) | Placed directly using `figma_set_image_fill` |
+| Available (from brief attachments) | Placed directly via `use_figma` |
 | Referenced but not provided | Gray placeholder rectangle with label and TODO note |
 | Icons (not provided) | Placeholder circle or square with icon description label |
+
+**Note:** Image support in `use_figma` is expanding. If image placement fails, flag it for manual placement and continue with placeholder rectangles.
 
 ### 5.3 — Design Tokens
 
@@ -208,35 +234,51 @@ All visual properties are applied using values from `design_guide.md`:
 
 If a Trend Adaptation Brief is active, apply the token overrides from the trend brief instead of base values for any overridden tokens.
 
+### 5.4 — Design System Reuse
+
+Before creating any element, the agent must check for existing design system assets:
+
+```
+1. Call search_design_system with the component type (e.g., "button", "card")
+2. If a matching library component exists → use it via use_figma (instantiate)
+3. If variables exist for the token → bind to the variable, don't hardcode values
+4. Only create from scratch when no library match exists
+```
+
+This is a behavioral change from v3.0 — `use_figma` encourages reuse by default, but the agent must explicitly search first for ManageEngine's design system components.
+
 ---
 
 ## 6 — Generation Process
 
-### Step 1: Verify Connection
+### Step 1: Verify Connection and Skills
 ```
-Call figma_get_status → confirm bridge is connected
+Confirm remote MCP server is connected
+Confirm /figma-use skill is available
 ```
+If either is missing, stop and instruct the user to set up the Figma MCP plugin.
 
 ### Step 2: Search for Existing Components
 ```
-Call figma_search_components → check if design system components exist
-that match the required component types
+Call search_design_system → check if design system components exist
+that match the required component types (buttons, cards, etc.)
 ```
-If reusable components exist, use `figma_instantiate_component` instead of building from scratch.
+Catalog available components for reuse. Note any gaps that require building from scratch.
 
 ### Step 3: Create Top-Level Frame
 ```
-Create frame on target page with properties from Section 3.1
+Invoke /figma-use skill
+Call use_figma → create frame on target page with properties from Section 3.1
 ```
 
 ### Step 4: Build Section Frames (Top to Bottom)
 For each section in the layout pattern's sequence:
 ```
-Create section frame → set dimensions, padding, fill
-  → Create component frames within section
+Call use_figma → create section frame → set dimensions, padding, fill
+  → Create component frames within section (reuse library components where possible)
     → Populate text content
     → Place images or placeholders
-    → Apply token values to all properties
+    → Apply token values (bind to variables when available)
 ```
 
 ### Step 5: Apply Tinted Section Alternation
@@ -244,10 +286,35 @@ Create section frame → set dimensions, padding, fill
 Walk through sections → assign tint pairs per layout_patterns.md rules
 ```
 
-### Step 6: Verify and Screenshot
+### Step 6: Self-Healing Verification Loop
+
+This replaces the single-pass screenshot of v3.0 with an iterative verification cycle.
+
 ```
-Call figma_capture_screenshot → capture the generated frame
-Present screenshot to user for review
+LOOP (max 3 iterations):
+  1. Take screenshot of the generated frame via use_figma
+  2. Compare screenshot against design spec:
+     - Section order matches layout pattern?
+     - Tinted sections alternate correctly?
+     - Text content is present and complete?
+     - Component spacing looks correct?
+     - No broken layouts or overlapping elements?
+  3. If mismatches found:
+     - Log each mismatch with description
+     - Fix via use_figma (adjust spacing, reorder, fix text, etc.)
+     - Continue to next iteration
+  4. If all checks pass → exit loop
+```
+
+**Exit conditions:**
+- All visual checks pass → proceed to Step 7
+- Max iterations reached → proceed to Step 7 with deviation log
+- Critical failure (frame didn't generate, MCP error) → stop and report
+
+### Step 7: Final Screenshot and Report
+```
+Take final screenshot via use_figma
+Present to user with summary
 ```
 
 ---
@@ -256,9 +323,10 @@ Present screenshot to user for review
 
 After the frame is generated:
 
-1. **Present to user:** Show a screenshot of the generated frame and summarize what was built (section count, component types used, any content gaps flagged)
-2. **Flag issues:** List any content gaps, missing images, or decisions the agent made that the user should review
-3. **Next steps:** Remind the user of their options:
+1. **Present to user:** Show a screenshot of the generated frame and summarize what was built (section count, component types used, library components reused, any content gaps flagged)
+2. **Verification summary:** Report results from the self-healing loop — how many iterations, what was fixed, any remaining deviations
+3. **Flag issues:** List any content gaps, missing images, or decisions the agent made that the user should review
+4. **Next steps:** Remind the user of their options:
    - Review and correct in Figma, then run Mode B for code
    - Accept as-is and run Mode B immediately
    - Request specific changes in the current session
@@ -267,12 +335,86 @@ After the frame is generated:
 
 ## 8 — Blueprint → Figma (C → A Escalation)
 
-When Mode C escalates to Figma, the input is a Page Blueprint (`{product}-blueprint.md`) instead of a parsed brief.
+Two escalation paths are available when Mode C output needs to become a Figma frame.
 
-**Difference from standard Mode A:**
-- The agent does NOT re-parse a content brief or re-run pattern selection
-- The blueprint already contains all design decisions: section sequence, component choices, token values
-- The agent reads the blueprint and executes Steps 3–6 from Section 6 directly
-- The blueprint's asset manifest determines image placement (available vs placeholder)
+### Path A: Blueprint → use_figma (Structured Build)
 
-**Prompt recognition:** If the user's prompt includes a blueprint file reference and says "do not re-analyze" or "use this as the design spec," the agent follows this escalation path.
+When Mode C escalates to Figma using the blueprint as a pre-decided spec, the agent executes Steps 3–7 from Section 6 directly — no brief re-parsing or pattern selection.
+
+**When to use:** When you want a structured Figma frame built from the blueprint with proper layer naming, auto-layout, and design system bindings. Best for frames that will be edited further in Figma.
+
+**Prompt recognition:** If the user's prompt includes a blueprint file reference and says "do not re-analyze" or "use this as the design spec," the agent follows this path.
+
+### Path B: HTML → generate_figma_design (Quick Visual)
+
+When Mode C has already produced working HTML, the agent can push the rendered HTML directly into Figma as editable layers.
+
+```
+1. Serve the Mode C HTML output (index.html + styles.css + script.js)
+2. Call generate_figma_design with the live URL or localhost
+3. Figma receives editable layers matching the rendered HTML
+4. User corrects in Figma as needed
+5. Run Mode B against the corrected frame for final production code
+```
+
+**When to use:** When you want a fast visual representation in Figma without building structured frames from scratch. The output layers mirror the rendered HTML rather than following the Section 4 naming convention. Best for quick review cycles.
+
+**Tradeoff:** Path B layers won't have the structured naming and auto-layout of Path A. If extensive Figma editing is planned, Path A is preferred. If the goal is visual review followed by Mode B code generation, Path B is faster.
+
+→ For Mode B code generation from either path: see `figma_to_code.md`
+
+---
+
+## 9 — Custom Skill Packaging (Optional)
+
+Your skill files can be packaged as installable Figma skills for sharing across teams or the Figma Community.
+
+### Converting figma_capture.md to a Figma Skill
+
+The Figma skill format uses YAML frontmatter instead of HTML comment metadata:
+
+```markdown
+---
+name: me-generate-landing-page
+description: "Generate a ManageEngine landing page frame from a content brief using the UX Skill File Architecture. Use when building new product landing pages that follow ManageEngine design standards."
+compatibility: Requires the figma-use skill to be installed alongside this skill
+metadata:
+  mcp-server: figma
+  version: 4.0
+  author: ManageEngine UX
+---
+
+# Generate ManageEngine landing page
+
+**Always pass `skillNames: "me-generate-landing-page"` when calling `use_figma` as part of this skill.**
+
+**You MUST invoke the `figma-use` skill before every `use_figma` call.**
+
+## When to use
+- Creating new ManageEngine product landing pages from a content brief
+- Escalating a Mode C Page Blueprint into a Figma frame
+- Rebuilding an existing landing page with updated content
+
+## Instructions
+1. Read the content brief and parse using content_brief.md rules
+2. Search connected libraries for ManageEngine design system components
+3. Select layout pattern from layout_patterns.md
+4. Create the top-level frame at 1440px width
+5. Build sections top to bottom, reusing library components
+6. Apply design tokens from design_guide.md
+7. Run the self-healing verification loop (screenshot → compare → fix)
+8. Present final screenshot with summary
+
+## Examples
+**Input:** "Generate a landing page for MSP Central using the attached brief"
+**Output:** A 1440px Figma frame with 7 sections (Hero, Trust Signals, Feature Grid, Feature Deep-Dive, Testimonials, Integration Grid, Closing CTA), all text populated from the brief, library buttons and cards reused, tinted sections alternating correctly.
+```
+
+### Supporting Files
+
+A packaged skill can include:
+- `scripts/` — Reusable Plugin API scripts for common frame operations
+- `references/` — Token value tables, component spec summaries
+- `assets/` — Template frames or starter components
+
+→ For skill authoring details: see Figma developer docs at `developers.figma.com/docs/figma-mcp-server/create-skills/`

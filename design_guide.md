@@ -1,7 +1,7 @@
 <!-- meta
 name: design_guide
 title: Design Guide
-version: 3.0
+version: 4.0
 status: active
 purpose: Define all design token values — colors, typography, spacing, surfaces — that form the visual identity of ManageEngine landing pages.
 owns:
@@ -17,6 +17,7 @@ requires:
   - workflow
 depends_on: []
 referenced_by:
+  - design_system_prompt
   - components
   - layout_patterns
   - css_js_rules
@@ -29,10 +30,12 @@ modes:
   mode_b: required
   mode_c: required
 layer: design_decision
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Design Guide — Token Authority
+
+> **v4.0 note:** All {PLACEHOLDER} values in this file are now filled by design_system_prompt.md — the centralized token value file. Read design_system_prompt.md alongside this file in every session.
 
 This file is the single source of truth for all design token values. No other skill file defines token values — they reference this file.
 

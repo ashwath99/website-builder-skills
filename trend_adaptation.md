@@ -1,7 +1,7 @@
 <!-- meta
 name: trend_adaptation
 title: Trend Adaptation
-version: 3.0
+version: 4.0
 status: active
 purpose: Ingest external design trends and translate them into concrete, brand-safe token overrides and layout modifications that the existing skill file system can execute.
 owns:
@@ -28,7 +28,7 @@ modes:
   mode_b: optional
   mode_c: optional
 layer: exploration
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Trend Adaptation — Token Overrides & Layout Modifications

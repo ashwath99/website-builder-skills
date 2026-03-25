@@ -1,7 +1,7 @@
 <!-- meta
 name: variation_generator
 title: Variation Generator
-version: 3.0
+version: 4.0
 status: active
 purpose: Given a single content brief, produce multiple distinct landing page arrangements using only components and layouts already defined in the skill file system.
 owns:
@@ -27,7 +27,7 @@ modes:
   mode_b: not_used
   mode_c: optional
 layer: exploration
-last_updated: 2026-03-16
+last_updated: 2026-03-25
 -->
 
 # Variation Generator — Multi-Variant Exploration

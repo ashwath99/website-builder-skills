@@ -1,15 +1,19 @@
-<!-- meta
+---
 name: workflow
-title: Workflow
-version: 3.0
+title: "Workflow"
+version: 4.0
 status: active
-purpose: Establish the execution pipeline, define modes, and specify which skill files are read for each task.
+purpose: >
+  Establish the execution pipeline, define modes, and specify which skill files
+  are read for each task. Updated for remote Figma MCP server, unified tool set,
+  and new combined workflows.
 owns:
-  - Pipeline phases and sequencing
-  - Execution mode definitions (A, B, C)
-  - Combined workflow definitions
-  - Skill file reading order
-  - Exploration layer insertion point
+  - "Pipeline phases and sequencing"
+  - "Execution mode definitions (A, B, C)"
+  - "Combined workflow definitions"
+  - "Skill file reading order"
+  - "Exploration layer insertion point"
+  - "Figma MCP connection requirements"
 requires: []
 depends_on: []
 referenced_by:
@@ -29,8 +33,8 @@ modes:
   mode_b: required
   mode_c: required
 layer: context
-last_updated: 2026-03-16
--->
+last_updated: 2026-03-25
+---
 
 # Workflow — Pipeline Context
 
@@ -41,6 +45,20 @@ Read this file first in every session.
 ## Pipeline Overview
 
 This skill file system enables AI agents to convert marketing content briefs into Figma design frames and/or production-ready landing page code. The pipeline is modular — agents read only the files needed for the active execution mode.
+
+### Figma MCP Server
+
+All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) by default. No local bridge or desktop app is required for most workflows.
+
+| Capability | Tool | Notes |
+|---|---|---|
+| Write to Figma canvas | `use_figma` | Requires `/figma-use` skill. Creates, edits, deletes frames, components, variables, styles, text, images. |
+| Read design context | `get_design_context` | Returns structured layout, spacing, colors, typography from a frame or selection. |
+| Read tokens & variables | `use_figma` (Plugin API script) | Extracts variables and formats as CSS custom properties. See Master Reference for script. |
+| Search design system | `search_design_system` | Finds components, variables, styles across connected libraries. |
+| Push HTML to Figma | `generate_figma_design` | Converts rendered HTML into editable Figma layers. |
+
+→ Full tool details: see `figma_capture.md` Section 2 and `figma_to_code.md` Section 2
 
 ---
 
@@ -57,7 +75,9 @@ Content Brief
   → Select layout (layout_patterns.md)
   → Map components (components.md)
   → Apply tokens (design_guide.md)
-  → Push to Figma (figma_capture.md)
+  → Search design system for reusable components
+  → Push to Figma via use_figma (figma_capture.md)
+  → Self-healing verification loop (screenshot → compare → fix)
 ```
 
 **Required skill files:**
@@ -73,6 +93,8 @@ Content Brief
 - `trend_adaptation.md` — if applying a trend profile
 - `variation_generator.md` — if exploring multiple arrangements before committing
 
+**MCP requirements:** Remote server connected, `/figma-use` skill installed.
+
 ---
 
 ### Mode B: Figma → Code
@@ -81,12 +103,14 @@ Content Brief
 
 **Pipeline:**
 ```
-Figma Dev Link
-  → Inspect frame (figma_to_code.md)
+Figma Dev Link (or desktop selection)
+  → Inspect frame via get_design_context (figma_to_code.md)
+  → Extract variables via use_figma Plugin API script
+  → Identify library components via search_design_system
   → Extract specs + export assets
   → Generate HTML (html_structure.md)
   → Generate CSS/JS (css_js_rules.md)
-  → Self-review
+  → Self-review (with optional visual comparison via generate_figma_design)
 ```
 
 **Required skill files:**
@@ -102,6 +126,8 @@ Figma Dev Link
 - `trend_adaptation.md` — if a trend override sheet was produced earlier and should inform code token values
 
 **Critical rule:** The Figma dev link is the sole source of truth. If Mode B follows Mode A (with or without manual corrections), the agent inspects the frame fresh — no prior assumptions from Mode A carry over.
+
+**MCP requirements:** Remote server connected. `/figma-use` skill needed only if annotating the frame during review.
 
 ---
 
@@ -136,6 +162,8 @@ Content Brief
 - `trend_adaptation.md` — if applying a trend profile
 - `variation_generator.md` — if exploring multiple arrangements
 
+**MCP requirements:** None — Mode C does not touch Figma unless escalating.
+
 **Page Blueprint:** Mode C produces a `{product}-blueprint.md` file as its source of truth (the text equivalent of a Figma frame). This file captures all design decisions, section structure, token values, and asset manifest. It survives session resets and can be edited manually between iterations.
 
 → See `agent_execution_prompt.md` for the full blueprint format.
@@ -148,8 +176,19 @@ Content Brief
 |---|---|
 | **A → correct → B** | Generate Figma frame, make manual corrections, then generate code from corrected frame |
 | **C → iterate** | Generate code + blueprint, review in browser, iterate on blueprint + code in subsequent prompts |
-| **C → A** | Generate code + blueprint, then use the finalized blueprint as input for Mode A to produce a Figma frame (agent skips decision-making, acts as renderer) |
-| **C → A → correct → B** | Full loop: quick code draft, blueprint to Figma, manual refinement, final code from corrected frame |
+| **C → A (structured)** | Generate code + blueprint, then use the finalized blueprint as input for Mode A to produce a structured Figma frame via `use_figma` (agent skips decision-making, acts as renderer) |
+| **C → Figma (quick visual)** | Generate code, push rendered HTML to Figma via `generate_figma_design` for fast visual review as editable layers |
+| **C → Figma → correct → B** | Generate code, push HTML to Figma via `generate_figma_design`, make manual corrections, run Mode B against corrected frame for final production code |
+| **C → A → correct → B** | Full loop: quick code draft, structured blueprint to Figma, manual refinement, final code from corrected frame |
+
+### Choosing Between C → A and C → Figma
+
+| Path | Method | Layer Quality | Best For |
+|---|---|---|---|
+| **C → A (structured)** | Blueprint → `use_figma` builds frame from scratch | Structured naming, auto-layout, variable bindings | Frames that will be extensively edited in Figma |
+| **C → Figma (quick visual)** | HTML → `generate_figma_design` pushes rendered output | HTML-mirror layers, may lack auto-layout | Fast visual review, minimal Figma editing planned |
+
+→ Both paths are detailed in `figma_capture.md` Section 8
 
 ---
 
@@ -193,8 +232,8 @@ DESIGN DECISION LAYER
   layout_patterns.md
 
 FIGMA LAYER
-  figma_capture.md  (Mode A — push to Figma)
-  figma_to_code.md  (Mode B — read from Figma)
+  figma_capture.md  (Mode A — write to Figma via use_figma)
+  figma_to_code.md  (Mode B — read from Figma via get_design_context)
 
 CODE GENERATION LAYER
   html_structure.md
@@ -225,11 +264,13 @@ Full ownership table is maintained in the Skill File Architecture — Master Ref
 ## Supported Agents
 
 All execution modes work across:
-- **Claude Code** — terminal agent with filesystem access
-- **Cursor AI** — IDE agent with workspace access
-- **Codex** — CLI agent
+- **Claude Code** — terminal agent with filesystem access; install Figma plugin for MCP + skills
+- **Cursor AI** — IDE agent with workspace access; install Figma plugin for MCP + skills
+- **Codex** — CLI agent; run `codex mcp add figma --url https://mcp.figma.com/mcp`
 
-Agent-specific notes (file referencing, MCP setup, session handling) are in `agent_execution_prompt.md`.
+All three agents are interchangeable across all pipeline stages. The Figma MCP plugin (available for Claude Code and Cursor) bundles the MCP server configuration and foundational skills automatically.
+
+Agent-specific notes (file referencing, session handling) are in `agent_execution_prompt.md`.
 
 ---
 
@@ -246,9 +287,10 @@ Agent-specific notes (file referencing, MCP setup, session handling) are in `age
 → Full rules in `css_js_rules.md` and `html_structure.md`
 
 ### Figma Output (Mode A)
-- Frame pushed to specified file and page via MCP
-- Layer naming follows component naming from `components.md`
-- Tokens match `design_guide.md`
+- Frame pushed to specified file and page via `use_figma`
+- Layer naming follows convention from `figma_capture.md` Section 4
+- Tokens match `design_guide.md` — bound to Figma variables when available
+- Self-healing verification loop confirms fidelity before presenting to user
 
 → Full rules in `figma_capture.md`
 
