@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [4.0.1] — 2026-03-26
+
+### Added
+
+- **v4 presentation deck** (`docs/website-builder-skills-presentation-v4.pdf`) — Updated slide deck covering remote Figma MCP, centralized tokens, self-healing loop, and all v4.0 features.
+- **v4 video walkthrough** (`docs/website-builder-skills-v4.mp4`) — New video walkthrough for the v4.0 skill system.
+
+### Changed
+
+- **`README.md`** — Media section now links to v4 PDF and v4 video.
+- **`docs/GUIDE.md`** — Media section now links to v4 PDF and v4 video.
+
+---
+
 ## [4.0] — 2026-03-25
 
 ### Added

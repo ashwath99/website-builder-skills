@@ -24,9 +24,9 @@ Built for **Claude Code**, **Cursor AI**, and **Codex**.
 
 - **Guide**: [`docs/GUIDE.md`](docs/GUIDE.md)
 - **Changelog**: [`CHANGELOG.md`](CHANGELOG.md)
-- **Deck (PDF)**: [`docs/website-builder-skills-presentation.pdf`](docs/website-builder-skills-presentation.pdf)
+- **Deck (PDF)**: [`docs/website-builder-skills-presentation-v4.pdf`](docs/website-builder-skills-presentation-v4.pdf)
 - **Infographic (PNG)**: [`infographics/website-builder-skills-infographics.png`](infographics/website-builder-skills-infographics.png)
-- **Video (MP4)**: [Release asset (`v0.1.0`)](https://github.com/ashwath99/website-builder-skills/releases/download/v0.1.0/website-builder-skills-cinematic-explanatory-video.mp4)
+- **Video (MP4)**: [`docs/website-builder-skills-v4.mp4`](docs/website-builder-skills-v4.mp4)
 
 ---
 
