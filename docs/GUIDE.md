@@ -9,7 +9,7 @@ A practical guide to understanding, using, and extending the Website Builder Ski
 ## Media
 
 - **Deck (PDF)**: [`website-builder-skills-presentation-v4.pdf`](website-builder-skills-presentation-v4.pdf)
-- **Infographic (PNG)**: [`../infographics/website-builder-skills-infographics.png`](../infographics/website-builder-skills-infographics.png)
+- **Infographic (PNG)**: [`../infographics/website-builder-skills-infographics-v4.png`](../infographics/website-builder-skills-infographics-v4.png)
 - **Video (MP4)**: [`website-builder-skills-v4.mp4`](website-builder-skills-v4.mp4)
 
 ---
