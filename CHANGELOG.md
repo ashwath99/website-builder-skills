@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [4.0.2] — 2026-04-02
+
+### Added
+
+- **Conference talk video** (`docs/Architecting_Modular_Skill_Files_for_Autonomous_UI.mp4`) — Presentation recording on architecting modular skill files for autonomous UI generation.
+- **How-to video** (`docs/website-builder-skills-how-to-v4.mp4`) — Step-by-step how-to walkthrough for the v4.0 skill system.
+- **`CODE_OF_CONDUCT.md`** — Contributor Covenant 2.1.
+- **`CONTRIBUTING.md`** — Contributing guidelines with conventions, ownership principle, and commit style.
+- **`SECURITY.md`** — Security policy with supported versions and vulnerability reporting process.
+- **Issue templates** (`.github/ISSUE_TEMPLATE/`) — Bug report and feature request templates.
+- **Pull request template** (`.github/PULL_REQUEST_TEMPLATE.md`) — PR checklist for ownership, metadata, and changelog.
+
+---
+
 ## [4.0.1] — 2026-03-26
 
 ### Added
