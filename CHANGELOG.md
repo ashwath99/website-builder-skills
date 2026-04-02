@@ -10,13 +10,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Conference talk video** (`docs/Architecting_Modular_Skill_Files_for_Autonomous_UI.mp4`) — Presentation recording on architecting modular skill files for autonomous UI generation.
-- **How-to video** (`docs/website-builder-skills-how-to-v4.mp4`) — Step-by-step how-to walkthrough for the v4.0 skill system.
 - **`CODE_OF_CONDUCT.md`** — Contributor Covenant 2.1.
 - **`CONTRIBUTING.md`** — Contributing guidelines with conventions, ownership principle, and commit style.
 - **`SECURITY.md`** — Security policy with supported versions and vulnerability reporting process.
 - **Issue templates** (`.github/ISSUE_TEMPLATE/`) — Bug report and feature request templates.
 - **Pull request template** (`.github/PULL_REQUEST_TEMPLATE.md`) — PR checklist for ownership, metadata, and changelog.
+
+### Removed
+
+- **Video assets** — Removed all MP4 files from the repository (kept locally in `videos/`). Videos are too large for git tracking and not useful on GitHub.
 
 ---
 
@@ -25,13 +27,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **v4 presentation deck** (`docs/website-builder-skills-presentation-v4.pdf`) — Updated slide deck covering remote Figma MCP, centralized tokens, self-healing loop, and all v4.0 features.
-- **v4 video walkthrough** (`docs/website-builder-skills-v4.mp4`) — New video walkthrough for the v4.0 skill system.
 - **v4 infographic** (`infographics/website-builder-skills-infographics-v4.png`) — Updated infographic for the v4.0 skill system.
 
 ### Changed
 
-- **`README.md`** — Media section now links to v4 PDF, v4 video, and v4 infographic.
-- **`docs/GUIDE.md`** — Media section now links to v4 PDF, v4 video, and v4 infographic.
+- **`README.md`** — Media section now links to v4 PDF and v4 infographic.
+- **`docs/GUIDE.md`** — Media section now links to v4 PDF and v4 infographic.
 
 ---
 

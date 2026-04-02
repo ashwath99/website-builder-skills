@@ -3,6 +3,9 @@
 *~
 .env
 
+# Videos (kept locally, not tracked in git)
+videos/
+
 # OS
 .DS_Store
 **/.DS_Store

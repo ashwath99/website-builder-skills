@@ -26,7 +26,6 @@ Built for **Claude Code**, **Cursor AI**, and **Codex**.
 - **Changelog**: [`CHANGELOG.md`](CHANGELOG.md)
 - **Deck (PDF)**: [`docs/website-builder-skills-presentation-v4.pdf`](docs/website-builder-skills-presentation-v4.pdf)
 - **Infographic (PNG)**: [`infographics/website-builder-skills-infographics-v4.png`](infographics/website-builder-skills-infographics-v4.png)
-- **Video (MP4)**: [`docs/website-builder-skills-v4.mp4`](docs/website-builder-skills-v4.mp4)
 
 ---
 
