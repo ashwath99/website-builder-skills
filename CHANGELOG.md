@@ -16,6 +16,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Issue templates** (`.github/ISSUE_TEMPLATE/`) — Bug report and feature request templates.
 - **Pull request template** (`.github/PULL_REQUEST_TEMPLATE.md`) — PR checklist for ownership, metadata, and changelog.
 
+### Changed
+
+- **Fully genericized the skill system** — Removed all brand-specific hardcoded values (`#E9142B`, `ZohoPuvi`, ManageEngine references) across 11 files. `color-primary` and `font-heading` are now placeholders filled via `design_system_prompt.md`, making the system usable for any product or brand.
+- **`design_system_prompt.md`** — Added `color-primary` and `font-heading` as new placeholders; total count now 87 (up from 85). Genericized per-product override examples and locked values section.
+- **`design_guide.md`** — Brand invariants now reference placeholders instead of hardcoded values.
+- **`css_js_rules.md`**, **`trend_adaptation.md`**, **`agent_execution_prompt.md`**, **`figma_capture.md`**, **`skill_usage_matrix.md`**, **`html_structure.md`**, **`figma_to_code.md`**, **`layout_patterns.md`**, **`docs/GUIDE.md`** — All genericized.
+
 ### Removed
 
 - **Video assets** — Removed all MP4 files from the repository (kept locally in `videos/`). Videos are too large for git tracking and not useful on GitHub.

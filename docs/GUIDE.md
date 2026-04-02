@@ -110,7 +110,7 @@ Example of the ownership split for design tokens:
 |---|---|---|
 | Token structure and rules | `design_guide.md` | All files that use tokens |
 | Token production values | `design_system_prompt.md` | `design_guide.md`, `components.md`, `css_js_rules.md` |
-| Primary CTA is `#E9142B` | `design_system_prompt.md` | `css_js_rules.md`, `components.md`, `trend_adaptation.md` |
+| Primary CTA uses `color-primary` | `design_system_prompt.md` | `css_js_rules.md`, `components.md`, `trend_adaptation.md` |
 | CSS syntax is `--{product}-color-primary` | `css_js_rules.md` | `figma_to_code.md`, `trend_adaptation.md` |
 | CTA button HTML uses `{product}-btn--primary` class | `html_structure.md` | `css_js_rules.md` |
 
@@ -369,7 +369,7 @@ Before running any execution mode, you can optionally use two skill files to exp
 | Dark Mode Technical | Compact, dark, progressive-disclosure, glassmorphic | Developer tools, API platforms |
 | Approachable SaaS | Standard, warm, hero-dominant, elevated | Mailchimp, Slack |
 
-**Brand safety:** Every trend application passes through an invariant gate. The primary CTA color (`#E9142B`), brand font (ZohoPuvi), responsive breakpoints, and code standards are locked — no trend can modify them.
+**Brand safety:** Every trend application passes through an invariant gate. The primary CTA color, brand fonts, responsive breakpoints, and code standards are locked — no trend can modify them.
 
 ### Variation Generator
 
@@ -729,8 +729,8 @@ During Mode C iteration, push your generated HTML to Figma via `generate_figma_d
 
 | Invariant | Value |
 |---|---|
-| Primary CTA color | `#E9142B` |
-| Heading font | ZohoPuvi (Zoho CDN) |
+| Primary CTA color | Per `design_system_prompt.md` |
+| Heading font | Per `design_system_prompt.md` |
 | Breakpoints | 480px, 1024px |
 | Code stack | HTML5, CSS3, jQuery |
 | Output format | 3 files (html, css, js) |
@@ -764,4 +764,4 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 ---
 
-*Built by [Ashwath](https://github.com/ashwath99) — UX Designer, ManageEngine*
+*Built by [Ashwath](https://github.com/ashwath99)*

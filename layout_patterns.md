@@ -140,7 +140,7 @@ A layout pattern is a complete section sequence for a landing page. The agent se
 
 ### 3.1 — Pattern: Standard Product Page
 
-**Best for:** Most ManageEngine product landing pages. Balanced approach for mixed audiences.
+**Best for:** Most product landing pages. Balanced approach for mixed audiences.
 
 **Section sequence:**
 ```

@@ -12,7 +12,7 @@ Built for **Claude Code**, **Cursor AI**, and **Codex**.
 
 - **Remote Figma MCP plugin** — Migrated from 23 local desktop bridge tools to 4 unified tools via `mcp.figma.com/mcp` (`use_figma`, `get_design_context`, `search_design_system`, `generate_figma_design`).
 - **Self-healing verification loop** — Mode A now iterates: screenshot → compare → fix → re-screenshot (max 3 cycles) for higher frame fidelity.
-- **Centralized design tokens** — New `design_system_prompt.md` fills all 85 `{PLACEHOLDER}` values from one file, enabling per-product token sets without editing core skill files.
+- **Centralized design tokens** — New `design_system_prompt.md` fills all 87 `{PLACEHOLDER}` values from one file, enabling per-product token sets without editing core skill files.
 - **Design system reuse** — Agents search for existing library components before creating new ones.
 - **Variable-first token mapping** — Mode B uses Figma variable names directly as CSS custom property names.
 - **4 escalation paths from Mode C** — Including quick visual review via `generate_figma_design`.
@@ -73,7 +73,7 @@ Start with `workflow.md` — it defines the pipeline and tells you which files t
 |------|---------|
 | [content_brief.md](content_brief.md) | Brief parsing, section identification, content gap detection |
 | [design_guide.md](design_guide.md) | Design tokens — colors, typography, spacing, surfaces (structure and rules) |
-| [design_system_prompt.md](design_system_prompt.md) | **New in v4.0** — Centralized token values for all 85 `{PLACEHOLDER}` entries |
+| [design_system_prompt.md](design_system_prompt.md) | **New in v4.0** — Centralized token values for all 87 `{PLACEHOLDER}` entries |
 | [components.md](components.md) | Component library — every reusable UI block with variants |
 | [layout_patterns.md](layout_patterns.md) | Page layout patterns and selection logic |
 

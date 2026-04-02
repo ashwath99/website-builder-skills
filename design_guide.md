@@ -3,7 +3,7 @@ name: design_guide
 title: Design Guide
 version: 4.0
 status: active
-purpose: Define all design token values — colors, typography, spacing, surfaces — that form the visual identity of ManageEngine landing pages.
+purpose: Define all design token values — colors, typography, spacing, surfaces — that form the visual identity of landing pages.
 owns:
   - Color palette (brand, neutral, semantic, tint pairs)
   - Typography scale (sizes, weights, line-heights)
@@ -51,10 +51,10 @@ These values are locked. No trend adaptation, variation, or override may change 
 
 | Invariant | Value | Notes |
 |---|---|---|
-| Primary CTA color | `#E9142B` | ManageEngine red — used for all primary action buttons |
-| Brand font (headings) | ZohoPuvi | Loaded from Zoho CDN |
+| Primary CTA color | `{PLACEHOLDER}` | Brand primary — used for all primary action buttons |
+| Brand font (headings) | `{PLACEHOLDER}` | Heading font family |
 | Body font | `{PLACEHOLDER}` | System font stack or brand-specified body font |
-| CTA hierarchy | Primary (red filled) → Secondary (outlined/ghost) → Tertiary (text link) | Order and visual weight must be maintained |
+| CTA hierarchy | Primary (filled) → Secondary (outlined/ghost) → Tertiary (text link) | Order and visual weight must be maintained |
 
 → Additional invariants enforced in code output: see `css_js_rules.md` (breakpoints, file format, naming conventions)
 
@@ -66,7 +66,7 @@ These values are locked. No trend adaptation, variation, or override may change 
 
 | Token Name | Value | Usage |
 |---|---|---|
-| `color-primary` | `#E9142B` | Primary CTA backgrounds, key accent elements |
+| `color-primary` | `{PLACEHOLDER}` | Primary CTA backgrounds, key accent elements |
 | `color-primary-hover` | `{PLACEHOLDER}` | Primary CTA hover state |
 | `color-primary-active` | `{PLACEHOLDER}` | Primary CTA active/pressed state |
 | `color-secondary` | `{PLACEHOLDER}` | Secondary brand color if applicable |
@@ -118,11 +118,11 @@ The tinted section pattern system uses matched surface/border color pairs. Each 
 
 | Token Name | Value | Usage |
 |---|---|---|
-| `font-heading` | `'ZohoPuvi', sans-serif` | All headings (H1–H6), display text |
+| `font-heading` | `{PLACEHOLDER}` | All headings (H1–H6), display text |
 | `font-body` | `{PLACEHOLDER}` | Body text, descriptions, UI elements |
 | `font-mono` | `{PLACEHOLDER}` | Code snippets, technical content (if applicable) |
 
-**CDN reference for ZohoPuvi:** `{PLACEHOLDER — Zoho CDN URL}`
+**CDN reference for heading font:** `{PLACEHOLDER}` (if applicable)
 
 ### 3.2 — Size Scale
 
@@ -226,7 +226,7 @@ CTA hierarchy defines three levels. Every page must respect this visual weight o
 ### Primary CTA
 | Property | Value |
 |---|---|
-| Background | `color-primary` (`#E9142B`) |
+| Background | `color-primary` |
 | Text color | `{PLACEHOLDER}` |
 | Font weight | `font-weight-semibold` |
 | Border radius | `radius-sm` |

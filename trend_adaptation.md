@@ -33,7 +33,7 @@ last_updated: 2026-03-25
 
 # Trend Adaptation — Token Overrides & Layout Modifications
 
-This file gives the agent a method for identifying design trends, mapping them to specific token and layout changes within the ManageEngine design system, and enforcing brand compliance throughout.
+This file gives the agent a method for identifying design trends, mapping them to specific token and layout changes within the design system, and enforcing brand compliance throughout.
 
 → For base token values being overridden: see `design_guide.md`
 → For how overrides are expressed in CSS: see `css_js_rules.md`
@@ -49,8 +49,8 @@ Before any trend is applied, these elements are locked. No trend override may to
 
 | Invariant | Value | Defined In |
 |---|---|---|
-| Primary CTA color | `#E9142B` | `design_guide.md` |
-| Brand font (headings) | ZohoPuvi (Zoho CDN) | `design_guide.md` |
+| Primary CTA color | Per `design_system_prompt.md` | `design_guide.md` |
+| Brand font (headings) | Per `design_system_prompt.md` | `design_guide.md` |
 | Body font | Per `design_guide.md` | `design_guide.md` |
 | CTA hierarchy | Primary → Secondary → Tertiary | `design_guide.md` |
 | Class prefix pattern | `{product}-` | `html_structure.md` |
@@ -75,7 +75,7 @@ How much breathing room exists between and within sections.
 | Position | Token Changes | Visual Effect |
 |---|---|---|
 | `airy` | `space-section` increased ~40%; `grid-gutter` increased ~30%; `content-max-width` reduced | Luxurious whitespace, slower scroll pace, premium feel |
-| `standard` | Default values from `design_guide.md` | Current ManageEngine baseline |
+| `standard` | Default values from `design_guide.md` | Current baseline |
 | `compact` | `space-section` reduced ~35%; `grid-gutter` reduced ~20% | Information-dense, SaaS-dashboard feel, more content above fold |
 
 → Spacing tokens being modified are defined in `design_guide.md` Section 4
@@ -105,7 +105,7 @@ Warmth or coolness of surface colors and section backgrounds.
 | `cool` | Tint surface/border pairs shift toward cool neutrals (blue-gray, slate) | Technical precision, enterprise-grade |
 | `dark-mode` | Section backgrounds use dark surfaces; text inverts to light; cards get subtle light borders; CTA red remains | High contrast, modern SaaS aesthetic |
 
-**Invariant check:** `#E9142B` remains the primary CTA color in all temperature modes.
+**Invariant check:** The brand primary CTA color remains unchanged in all temperature modes.
 
 → Tint pair values being modified are defined in `design_guide.md` Section 2.4
 
@@ -261,7 +261,7 @@ For each non-default dimension value, list the exact CSS custom property changes
 
 **Step 3: Run the Invariant Gate.**
 Check every override against Section 1:
-- Does any override change `#E9142B`? → Reject
+- Does any override change `color-primary`? → Reject
 - Does any override change the font-family? → Reject
 - Does any override alter breakpoints? → Reject
 - Does any override introduce a new file or dependency? → Reject

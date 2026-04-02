@@ -497,8 +497,8 @@ After any execution, the agent self-checks against this list.
 - [ ] All classes use BEM naming with `{product}-` prefix
 - [ ] All design tokens are CSS custom properties (no hardcoded values in rulesets)
 - [ ] Variable-bound Figma tokens map to matching CSS custom property names (Mode B — from get_design_context or use_figma extraction)
-- [ ] Primary CTA uses `#E9142B`
-- [ ] Headings use ZohoPuvi font family
+- [ ] Primary CTA uses `color-primary` from `design_system_prompt.md`
+- [ ] Headings use `font-heading` from `design_system_prompt.md`
 - [ ] Responsive breakpoints at 480px and 1024px only
 - [ ] Desktop-first responsive approach
 - [ ] jQuery used only for UI interactions — no other JS libraries

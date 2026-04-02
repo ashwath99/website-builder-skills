@@ -88,7 +88,7 @@ All custom properties are declared in a `:root` block at the top of `styles.css`
 ```css
 :root {
   /* Colors — values from design_guide.md */
-  --{product}-color-primary: #E9142B;
+  --{product}-color-primary: {value};
   --{product}-color-primary-hover: {value};
   --{product}-color-text-primary: {value};
   --{product}-color-text-secondary: {value};
@@ -102,7 +102,7 @@ All custom properties are declared in a `:root` block at the top of `styles.css`
   --{product}-tint-2-border: {value};
 
   /* Typography — values from design_guide.md */
-  --{product}-font-heading: 'ZohoPuvi', sans-serif;
+  --{product}-font-heading: {value};
   --{product}-font-body: {value};
   --{product}-font-size-display: {value};
   --{product}-font-size-h1: {value};

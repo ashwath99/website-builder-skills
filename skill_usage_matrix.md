@@ -24,7 +24,7 @@ last_updated: 2026-03-25
 # UX Skill File Architecture — Master Reference
 
 > **Version:** 4.0
-> **Owner:** Ashwath — UX Designer, ManageEngine
+> **Owner:** Ashwath
 > **Purpose:** Enable AI agents to convert marketing content briefs into Figma design frames and production-ready code automatically.
 
 ---
@@ -411,7 +411,7 @@ compatibility: Requires the figma-use skill
 metadata:
   mcp-server: figma
   version: {version}
-  author: ManageEngine UX
+  author: "{PLACEHOLDER}"
 ---
 ```
 
@@ -450,8 +450,8 @@ All three agents are interchangeable across all pipeline stages.
 
 | Standard | Value | Defined In |
 |---|---|---|
-| Primary CTA | `#E9142B` | `design_guide.md` |
-| Heading font | ZohoPuvi (Zoho CDN) | `design_guide.md` |
+| Primary CTA | Per `design_system_prompt.md` | `design_guide.md` |
+| Heading font | Per `design_system_prompt.md` | `design_guide.md` |
 | Code stack | HTML5, CSS3, jQuery | `css_js_rules.md` |
 | Class naming | BEM with `{product}-` prefix | `html_structure.md` |
 | Output files | `index.html`, `styles.css`, `script.js` | `css_js_rules.md` |

@@ -245,7 +245,7 @@ Before creating any element, the agent must check for existing design system ass
 4. Only create from scratch when no library match exists
 ```
 
-This is a behavioral change from v3.0 — `use_figma` encourages reuse by default, but the agent must explicitly search first for ManageEngine's design system components.
+This is a behavioral change from v3.0 — `use_figma` encourages reuse by default, but the agent must explicitly search first for existing design system components.
 
 ---
 
@@ -376,28 +376,28 @@ The Figma skill format uses YAML frontmatter instead of HTML comment metadata:
 ```markdown
 ---
 name: me-generate-landing-page
-description: "Generate a ManageEngine landing page frame from a content brief using the UX Skill File Architecture. Use when building new product landing pages that follow ManageEngine design standards."
+description: "Generate a landing page frame from a content brief using the UX Skill File Architecture. Use when building new product landing pages that follow the design system standards."
 compatibility: Requires the figma-use skill to be installed alongside this skill
 metadata:
   mcp-server: figma
   version: 4.0
-  author: ManageEngine UX
+  author: "{PLACEHOLDER}"
 ---
 
-# Generate ManageEngine landing page
+# Generate landing page
 
 **Always pass `skillNames: "me-generate-landing-page"` when calling `use_figma` as part of this skill.**
 
 **You MUST invoke the `figma-use` skill before every `use_figma` call.**
 
 ## When to use
-- Creating new ManageEngine product landing pages from a content brief
+- Creating new product landing pages from a content brief
 - Escalating a Mode C Page Blueprint into a Figma frame
 - Rebuilding an existing landing page with updated content
 
 ## Instructions
 1. Read the content brief and parse using content_brief.md rules
-2. Search connected libraries for ManageEngine design system components
+2. Search connected libraries for existing design system components
 3. Select layout pattern from layout_patterns.md
 4. Create the top-level frame at 1440px width
 5. Build sections top to bottom, reusing library components

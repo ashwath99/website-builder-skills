@@ -55,7 +55,7 @@ Every generated `index.html` follows this skeleton:
   <title>{Page Title}</title>
   <meta name="description" content="{Meta description from brief}">
   <link rel="stylesheet" href="styles.css">
-  <!-- TODO: Add ZohoPuvi font CDN link -->
+  <!-- TODO: Add heading font CDN link (if applicable) -->
 </head>
 <body>
 

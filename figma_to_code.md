@@ -433,6 +433,6 @@ Code Connect links Figma library components to their corresponding code implemen
 4. Flag any components that have Figma instances but no Code Connect mapping
 ```
 
-**Note:** ManageEngine's current pipeline generates vanilla HTML/CSS/JS, not framework components. Code Connect mappings are useful as a reference for correct property usage and naming, even if the output format differs from the connected code.
+**Note:** The current pipeline generates vanilla HTML/CSS/JS, not framework components. Code Connect mappings are useful as a reference for correct property usage and naming, even if the output format differs from the connected code.
 
 → For Code Connect setup: see Figma developer docs at `developers.figma.com/docs/figma-mcp-server/tools-and-prompts/`
