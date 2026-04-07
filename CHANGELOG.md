@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0] — 2026-04-07
+
+### Added
+
+- **SKILL.md format** — Every skill now follows the universal Agent Skills specification (YAML frontmatter with `name`, `description`, `version`) for cross-IDE compatibility.
+- **`README.md`** — New v5.0 README documenting the restructured skill directory, architecture, and usage.
+
+### Changed
+
+- **Restructured into independent skill directories** — All 13 skills moved from flat files into their own folders with `SKILL.md` entry points. Files over 500 lines split into SKILL.md + reference files for progressive disclosure.
+- **Ownership-based naming** — Skills renamed by what they own: `workflow.md` → `pipeline-workflow/`, `content_brief.md` → `brief-parser/`, `design_guide.md` + `design_system_prompt.md` → `design-tokens/`, `components.md` → `component-library/`, `layout_patterns.md` → `layout-patterns/`, `figma_capture.md` → `figma-frame-builder/`, `figma_to_code.md` → `figma-code-extractor/`, `html_structure.md` → `html-generator/`, `css_js_rules.md` → `css-js-generator/`, `trend_adaptation.md` → `trend-adapter/`, `variation_generator.md` → `variation-explorer/`, `agent_execution_prompt.md` → `execution-prompts/`, `skill_usage_matrix.md` → `master-reference/`.
+- **All cross-references updated** — Every internal file reference now uses v5.0 skill paths instead of v4.0 filenames.
+- **Cross-IDE compatibility confirmed** — Works with Claude Code, Cursor AI, VS Code / GitHub Copilot, Antigravity (Google), Codex CLI, and Gemini CLI.
+
+### Removed
+
+- **HTML comment metadata blocks** — Replaced with standard YAML frontmatter across all skill files.
+
+---
+
 ## [4.0.2] — 2026-04-02
 
 ### Added
