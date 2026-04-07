@@ -28,9 +28,10 @@ version: "5.0"
 | `trend-adapter` | SKILL.md | Exploration | 5.0 | Active |
 | `variation-explorer` | SKILL.md | Exploration | 5.0 | Active |
 | `execution-prompts` | SKILL.md | Orchestration | 5.0 | Active |
+| `master-reference` | SKILL.md | Context | 5.0 | Active |
 | `design-tokens` | token-values.md | Design Decision | 5.0 | Active |
 
-**Total: 12 skills (12 active)**
+**Total: 13 skills (13 active)**
 
 ### v4.0 → v5.0 Changes
 
@@ -397,9 +398,12 @@ This minimizes token usage by avoiding unnecessary file reads.
 |---|---|---|---|
 | Claude Code | Terminal agent | Filesystem direct | Install Figma plugin (bundles MCP config + skills) |
 | Cursor AI | IDE agent | Workspace folder | Install Figma plugin via agent chat |
-| Codex | CLI agent | Project directory | `codex mcp add figma --url https://mcp.figma.com/mcp` + manual skill install |
+| VS Code / GitHub Copilot | IDE agent | Workspace folder | Configure MCP server in `.vscode/mcp.json` |
+| Antigravity (Google) | Cloud agent | Project directory | Configure MCP via project settings |
+| Codex CLI | CLI agent | Project directory | `codex mcp add figma --url https://mcp.figma.com/mcp` + manual skill install |
+| Gemini CLI | CLI agent | Project directory | Configure MCP server in settings |
 
-All three agents are interchangeable across all pipeline stages.
+All six agents are interchangeable across all pipeline stages.
 
 ---
 
