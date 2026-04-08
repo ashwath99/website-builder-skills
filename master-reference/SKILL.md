@@ -205,7 +205,9 @@ Each instruction, token definition, or rule exists in exactly ONE skill. Other s
 | CTA styles (primary, secondary, tertiary) | `design-tokens` | `component-library`, `html-generator`, `css-js-generator` |
 | Brand invariants (locked values) | `design-tokens` | `trend-adapter`, `execution-prompts` |
 | Token override protocol | `design-tokens` | `trend-adapter` |
-| Production token values (85 placeholders) | `design-tokens/token-values.md` | `design-tokens`, all downstream skills |
+| Production token values (97 placeholders) | `design-tokens/token-values.md` | `design-tokens`, all downstream skills |
+| Token ingestion protocols (7 sources) | `design-tokens/token-sources.md` | `pipeline-workflow`, `design-tokens` |
+| Token source detection logic | `pipeline-workflow` | All modes |
 | Iconography guidelines | `design-tokens` | `component-library` |
 | Image treatment standards | `design-tokens` | `figma-code-extractor` |
 

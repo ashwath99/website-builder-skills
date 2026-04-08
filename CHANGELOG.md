@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.4] — 2026-04-09
+
+### Added
+
+- **`design-tokens/token-sources.md`** (new file) — Full token ingestion protocol for all 7 supported input sources:
+  1. Product token `.md` file — direct read and mapping
+  2. Manual fill — existing `token-values.md` workflow
+  3. Website URL — CSS fetch, custom property extraction, computed value fallback
+  4. Figma Design System — variable extraction via `use_figma` Plugin API script + `search_design_system`
+  5. Figma Design Frame — `get_design_context` + `get_variable_defs` extraction with variable-first priority
+  6. Screenshot / image — visual extraction protocol for colors, typography estimates, spacing estimates; all values flagged as estimated
+  7. JSON token file — supports Style Dictionary, W3C Design Tokens, and Figma Tokens (Tokens Studio) formats
+  - **Section 8 — Token Name Normalization** — keyword matching table (40+ mapping rules) and value-type fallback matching to resolve source names to canonical token names
+  - **Section 9 — Gap Handling** — severity classification (Critical / High / Medium / Low) with fallback values and gap report format
+
+### Changed
+
+- **`pipeline-workflow`** — Token Source Detection section added between Execution Modes and Combined Workflows. Detection priority table defines how the agent identifies the active source type when multiple inputs are provided. Pipeline diagrams for Modes A and C updated to include the detection step before token application.
+- **`design-tokens/SKILL.md`** — Section 11 (new) summarises all 7 token sources with recognition signals and references `token-sources.md`. Token Override Protocol renumbered to Section 12. Reference pointer added to header cross-references.
+- **`master-reference`** — Ownership table updated with `token-sources.md` and token source detection logic entries.
+
+---
+
 ## [5.0.3] — 2026-04-09
 
 ### Changed

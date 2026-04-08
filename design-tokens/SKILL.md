@@ -13,6 +13,7 @@ This file is the single source of truth for all design token values. No other sk
 → For how tokens are expressed in CSS: see `css-js-generator/SKILL.md`
 → For how tokens are applied to components: see `component-library/SKILL.md`
 → For how tokens are overridden by trends: see `trend-adapter/SKILL.md`
+→ For how token values are extracted from various sources: see `design-tokens/token-sources.md`
 
 ---
 
@@ -271,7 +272,25 @@ Tokens for the Form component and all input fields. Applied consistently across 
 
 ---
 
-## 11 — Token Override Protocol
+## 11 — Token Sources
+
+Token values can be supplied from 7 different sources. The agent detects which source is available (see `pipeline-workflow` — Token Source Detection) and extracts values accordingly. All sources produce the same output: resolved values in `token-values.md` format.
+
+| # | Source | Recognition Signal |
+|---|---|---|
+| 1 | Product token file (`.md`) | A `{product}-design-tokens.md` file is attached or referenced |
+| 2 | Manual fill | `token-values.md` already has values filled in |
+| 3 | Website URL | A website URL is provided alongside the brief |
+| 4 | Figma Design System | A Figma library or design system reference is provided |
+| 5 | Figma Design Frame | A Figma frame URL or dev link is provided |
+| 6 | Screenshot | A `.png` / `.jpg` image is attached |
+| 7 | JSON token file | A `.json` file is attached or referenced |
+
+→ Full extraction protocols, token name normalization rules, and gap handling: see `design-tokens/token-sources.md`
+
+---
+
+## 12 — Token Override Protocol
 
 When `trend-adapter/SKILL.md` produces a Trend Adaptation Brief, it contains a Token Override Sheet — a set of replacement values for tokens defined in this file.
 

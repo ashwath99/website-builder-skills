@@ -1,7 +1,7 @@
 ---
 name: pipeline-workflow
 description: Establishes the execution pipeline, defines modes A/B/C, and specifies skill file reading order for converting marketing briefs into Figma designs and production code. Use when starting any website builder session, planning a new landing page, or needing to understand the execution workflow and mode definitions.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # Workflow — Pipeline Context
@@ -40,6 +40,7 @@ All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) by de
 ```
 Content Brief
   → Parse brief (brief-parser)
+  → Detect token source → resolve token values (design-tokens/token-sources.md)
   → Select layout (layout-patterns)
   → Map components (component-library)
   → Apply tokens (design-tokens)
@@ -107,6 +108,7 @@ Figma Dev Link (or desktop selection)
 ```
 Content Brief
   → Parse brief (brief-parser)
+  → Detect token source → resolve token values (design-tokens/token-sources.md)
   → Select layout (layout-patterns)
   → Map components (component-library)
   → Apply tokens (design-tokens)
@@ -135,6 +137,29 @@ Content Brief
 **Page Blueprint:** Mode C produces a `{product}-blueprint.md` file as its source of truth (the text equivalent of a Figma frame). This file captures all design decisions, section structure, token values, and asset manifest. It survives session resets and can be edited manually between iterations.
 
 → See `execution-prompts` for the full blueprint format.
+
+---
+
+## Token Source Detection
+
+Before any design tokens are applied, the agent identifies which token source has been provided and resolves all `{PLACEHOLDER}` values accordingly. This step runs at the start of Modes A and C (after brief parsing) and optionally in Mode B (if an override source is provided alongside the Figma link).
+
+### Detection Logic — Read Inputs in This Order
+
+| Priority | Signal | Source Type |
+|---|---|---|
+| 1 | A `.md` file attached or referenced that contains token names and values | Source 1 — Product Token File |
+| 2 | A `.json` file attached or referenced | Source 7 — JSON Token File |
+| 3 | A Figma library URL or design system reference provided | Source 4 — Figma Design System |
+| 4 | A Figma frame or file URL provided alongside a brief | Source 5 — Figma Design Frame |
+| 5 | A website URL provided alongside a brief | Source 3 — Website URL |
+| 6 | A `.png`, `.jpg`, or image file attached | Source 6 — Screenshot |
+| 7 | token-values.md already has values filled in | Source 2 — Manual Fill |
+| 8 | No source provided — all placeholders remain | Proceed with `{PLACEHOLDER}` — flag as gap |
+
+**When multiple sources are provided**, apply in priority order above. Values from a higher-priority source take precedence over lower ones. Any remaining gaps after extraction are flagged.
+
+→ Full extraction protocols for each source type: see `design-tokens/token-sources.md`
 
 ---
 
