@@ -1,7 +1,7 @@
 ---
 name: design-tokens
 description: Defines all design token values including colors, typography, spacing, shadows, borders, CTA styles, and brand invariants. Single source of truth for the visual identity. Use when applying design tokens, setting up brand colors, typography, or spacing for any landing page.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # Design Guide — Token Authority
@@ -160,6 +160,7 @@ A consistent spacing scale used across all components and layouts. All spacing v
 | `section-padding-y-lg` | `{PLACEHOLDER}` | Vertical padding for hero / emphasis sections |
 | `content-max-width` | `{PLACEHOLDER}` | Maximum content width within sections |
 | `content-max-width-narrow` | `{PLACEHOLDER}` | Narrow content width (text-heavy sections) |
+| `sidebar-width` | `{PLACEHOLDER}` | Fixed width of sidebar in sidebar layout types |
 | `grid-gutter` | `{PLACEHOLDER}` | Gap between grid columns |
 | `card-padding` | `{PLACEHOLDER}` | Internal padding of card components |
 
@@ -240,7 +241,23 @@ CTA hierarchy defines three levels. Every page must respect this visual weight o
 
 ---
 
-## 9 — Image Treatment
+## 9 — Form & Input Tokens
+
+Tokens for the Form component and all input fields. Applied consistently across contact, registration, newsletter, and download-gate form variants.
+
+| Token Name | Value | Usage |
+|---|---|---|
+| `input-height` | `{PLACEHOLDER}` | Height of single-line text inputs and selects |
+| `input-bg` | `{PLACEHOLDER}` | Input field background color |
+| `input-border` | `{PLACEHOLDER}` | Input border (e.g. `1px solid {color-border-default}`) |
+| `input-border-focus` | `{PLACEHOLDER}` | Border color on focus state |
+| `input-radius` | `{PLACEHOLDER}` | Border radius of input fields |
+| `input-placeholder-color` | `{PLACEHOLDER}` | Placeholder text color |
+| `input-padding` | `{PLACEHOLDER}` | Internal padding within input fields |
+
+---
+
+## 10 — Image Treatment
 
 | Property | Value |
 |---|---|
@@ -249,10 +266,12 @@ CTA hierarchy defines three levels. Every page must respect this visual weight o
 | Product screenshot radius | `{PLACEHOLDER}` |
 | Hero image max height | `{PLACEHOLDER}` |
 | Thumbnail aspect ratio | `{PLACEHOLDER}` |
+| Avatar size | `{PLACEHOLDER}` | Square size for person headshots (Team Card, Author Bio, Speaker Card) |
+| Map embed height | `{PLACEHOLDER}` | Default height of Map Embed component container |
 
 ---
 
-## 10 — Token Override Protocol
+## 11 — Token Override Protocol
 
 When `trend-adapter/SKILL.md` produces a Trend Adaptation Brief, it contains a Token Override Sheet — a set of replacement values for tokens defined in this file.
 

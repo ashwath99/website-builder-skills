@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.3] — 2026-04-09
+
+### Changed
+
+- **`design-tokens` — targeted additions for full-site component scope** — Three focused gaps addressed; no structural rethink:
+  - **`sidebar-width`** added to Section 4.2 (Layout-Specific Spacing) — token was referenced in `layout-patterns` grid system but undefined here.
+  - **Section 9 — Form & Input Tokens** (new) — 7 tokens covering input height, background, border, focus border, radius, placeholder color, and padding. Required by the new Form component in `component-library`.
+  - **Section 10 — Image Treatment** extended — `avatar-size` added for person headshots (Team Card, Author Bio, Speaker Card); `map-height` added for Map Embed component. Previous section 9, renumbered to 10.
+  - **Token Override Protocol** renumbered from Section 10 to Section 11.
+  - **`token-values.md`** updated — new rows for all 10 added tokens. Placeholder count updated from 87 to 97.
+
+---
+
 ## [5.0.2] — 2026-04-09
 
 ### Changed

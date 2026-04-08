@@ -156,6 +156,7 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 | `section-padding-y-lg`     | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
 | `content-max-width`        | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
 | `content-max-width-narrow` | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `sidebar-width`            | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
 | `grid-gutter`              | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
 | `card-padding`             | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
 
@@ -234,16 +235,34 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 ---
 
-## 12 — Image Treatment
+## 12 — Form & Input Tokens
 
 
-| Property               | Placeholder In              | Value           |
-| ---------------------- | --------------------------- | --------------- |
-| Screenshot border      | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
-| Screenshot shadow      | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
-| Screenshot radius      | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
-| Hero image max height  | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
-| Thumbnail aspect ratio | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
+| Token                    | Placeholder In                       | Value           |
+| ------------------------ | ------------------------------------ | --------------- |
+| `input-height`           | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-bg`               | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-border`           | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-border-focus`     | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-radius`           | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-placeholder-color`| `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-padding`          | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+
+
+---
+
+## 13 — Image Treatment
+
+
+| Property               | Placeholder In               | Value           |
+| ---------------------- | ---------------------------- | --------------- |
+| Screenshot border      | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Screenshot shadow      | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Screenshot radius      | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Hero image max height  | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Thumbnail aspect ratio | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Avatar size            | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Map embed height       | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
 
 
 ---
@@ -305,13 +324,14 @@ These values are structural CSS constants defined in `design-tokens/SKILL.md` an
 | Line heights                                | 3      |
 | Letter spacing                              | 2      |
 | Spacing base scale                          | 8      |
-| Spacing layout                              | 6      |
+| Spacing layout (incl. sidebar-width)        | 7      |
 | Shadows                                     | 3      |
 | Border radius                               | 3      |
 | CTA styles (primary + secondary + tertiary) | 8      |
 | Iconography                                 | 6      |
-| Image treatment                             | 5      |
+| Form & input tokens                         | 7      |
+| Image treatment (incl. avatar, map height)  | 7      |
 | Component-level                             | 2      |
-| **Total**                                   | **87** |
+| **Total**                                   | **97** |
 
 
