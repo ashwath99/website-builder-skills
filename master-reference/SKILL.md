@@ -1,7 +1,7 @@
 ---
 name: master-reference
 description: Central reference for the website builder skill architecture. Contains file inventory, cross-skill ownership table, usage matrix by mode, Figma MCP tool mapping, dependency map, and design system standards. Use when checking which skills are needed for a mode, verifying ownership of a rule, or looking up Figma MCP tool usage.
-version: "5.0.1"
+version: "5.0.4"
 ---
 
 # UX Skill File Architecture — Master Reference

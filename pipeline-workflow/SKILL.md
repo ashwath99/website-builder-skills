@@ -1,7 +1,7 @@
 ---
 name: pipeline-workflow
 description: Establishes the execution pipeline, defines modes A/B/C, and specifies skill file reading order for converting marketing briefs into Figma designs and production code. Use when starting any website builder session, planning a new landing page, or needing to understand the execution workflow and mode definitions.
-version: "5.0.1"
+version: "5.0.4"
 ---
 
 # Workflow — Pipeline Context

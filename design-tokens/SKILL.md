@@ -1,7 +1,7 @@
 ---
 name: design-tokens
 description: Defines all design token values including colors, typography, spacing, shadows, borders, CTA styles, and brand invariants. Single source of truth for the visual identity. Use when applying design tokens, setting up brand colors, typography, or spacing for any landing page.
-version: "5.0.1"
+version: "5.0.4"
 ---
 
 # Design Guide — Token Authority

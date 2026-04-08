@@ -1,7 +1,7 @@
 ---
 name: component-library
 description: Defines every reusable UI component for marketing website construction including hero variants, feature components, social proof, CTA, content, people/profile, timeline, navigation/index, form, and media components. Specifies content slots, configuration variants, and responsive behavior for each component. Use when mapping brief content to components, selecting component variants, or understanding component composition rules.
-version: "5.0.1"
+version: "5.0.2"
 ---
 
 # Components — UI Block Library
