@@ -1,6 +1,6 @@
 ---
 name: figma-code-extractor
-description: Converts finalized Figma frames into production HTML/CSS/JS through a 4-phase pipeline: inspect, plan, generate, self-review. Handles spec extraction, asset export, variable-first token mapping, and Code Connect integration. Use when generating code from Figma designs (Mode B).
+description: "Converts finalized Figma frames into production HTML/CSS/JS through a 4-phase pipeline: inspect, plan, generate, self-review. Handles spec extraction, asset export, variable-first token mapping, and Code Connect integration. Use when generating code from Figma designs (Mode B)."
 version: "5.0"
 ---
 
