@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # Figma Capture — Frame Generation
@@ -371,7 +371,7 @@ metadata:
 ## Instructions
 1. Read the content brief and parse using brief-parser rules
 2. Search connected libraries for existing design system components
-3. Select layout pattern from layout-patterns
+3. Infer page type and select section layout types from layout-patterns
 4. Create the top-level frame at 1440px width
 5. Build sections top to bottom, reusing library components
 6. Apply design tokens from design-tokens

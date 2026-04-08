@@ -1,7 +1,7 @@
 ---
 name: variation-explorer
 description: Generates multiple distinct landing page arrangements from a single content brief using 6 variation axes. Produces 3-5 meaningfully different page structures for stakeholder selection. Use when exploring layout alternatives, A/B testing options, or when stakeholders want to compare different page approaches.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # Variation Generator — Multi-Variant Exploration
@@ -53,7 +53,7 @@ The order in which content sections appear after the hero.
 | `outcome-first` | Results / metrics → How it works → Features → Proof → CTA | Audience is ROI-driven |
 | `story-first` | Scenario / day-in-the-life → Problem → Solution → CTA | Top-of-funnel, awareness-stage audience |
 
-→ Section sequencing rules and hard constraints: see `layout-patterns` Section 5
+→ Section sequencing rules and hard constraints: see `layout-patterns` Section 6
 
 ### 2.3 — Feature Presentation
 
@@ -69,7 +69,7 @@ How the product's feature set is displayed.
 | `bento-grid` | Mixed-size cards in masonry/grid layout | High visual variety, editorial feel |
 
 → Component specs for each: see `component-library` Sections 3.1–3.5
-→ Bento grid layout: see `layout-patterns` Section 6
+→ Bento grid layout: see `layout-patterns` Section 7
 
 ### 2.4 — CTA Strategy
 
@@ -216,7 +216,7 @@ Before presenting the Variation Spec:
 - [ ] All variants use the same content — only arrangement differs
 - [ ] Brand compliance: all invariants from `design-tokens` Section 1 and `trend-adapter` Section 1 maintained
 - [ ] Each variant includes a Tradeoffs note
-- [ ] Section sequencing hard rules from `layout-patterns` Section 5 are followed in every variant
+- [ ] Section sequencing hard rules from `layout-patterns` Section 6 are followed in every variant
 
 ---
 

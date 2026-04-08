@@ -1,7 +1,7 @@
 ---
 name: master-reference
 description: Central reference for the website builder skill architecture. Contains file inventory, cross-skill ownership table, usage matrix by mode, Figma MCP tool mapping, dependency map, and design system standards. Use when checking which skills are needed for a mode, verifying ownership of a rule, or looking up Figma MCP tool usage.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # UX Skill File Architecture — Master Reference
@@ -220,13 +220,15 @@ Each instruction, token definition, or rule exists in exactly ONE skill. Other s
 | Component responsive behavior | `component-library` | `css-js-generator` |
 | Component composition rules | `component-library` | `variation-explorer` |
 | Section-to-component mapping | `component-library` | `layout-patterns` |
-| Page layout pattern definitions | `layout-patterns` | `variation-explorer`, `execution-prompts` |
-| Section sequencing rules | `layout-patterns` | `variation-explorer` |
+| Section layout type definitions (split, grid, sidebar, linear, specialty) | `layout-patterns` | `variation-explorer`, `execution-prompts`, `html-generator` |
+| Page type inference logic (content signals → page type) | `layout-patterns` | `brief-parser`, `execution-prompts` |
+| Page assembly logic (section applicability per page type) | `layout-patterns` | `variation-explorer`, `execution-prompts` |
+| Universal sequencing rules | `layout-patterns` | `variation-explorer`, `figma-frame-builder` |
 | Grid system | `layout-patterns` | `css-js-generator` |
 | Tinted section alternation rules | `layout-patterns` | `css-js-generator`, `figma-frame-builder` |
 | Section rhythm and visual pacing | `layout-patterns` | — |
 | Bento grid layout definition | `layout-patterns` | `css-js-generator`, `trend-adapter` |
-| Pattern selection logic | `layout-patterns` | `execution-prompts` |
+| Step flow layout definition | `layout-patterns` | `html-generator` |
 
 ### Content & Brief
 

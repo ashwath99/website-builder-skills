@@ -1,7 +1,7 @@
 ---
 name: brief-parser
-description: Parses marketing content briefs to identify page sections, classify audiences, detect content gaps, and produce structured input for downstream skills. Use when processing any content brief, marketing document, or product copy that needs to be converted into a landing page structure.
-version: "5.0"
+description: Parses marketing content briefs to infer page type, classify audiences, identify page sections, detect content gaps, and produce structured input for downstream skills. Use when processing any content brief, marketing document, or product copy that needs to be converted into a web page structure.
+version: "5.0.1"
 ---
 
 # Content Brief — Parsing & Section Mapping
@@ -45,7 +45,37 @@ Read the entire brief. Produce a flat list of every content element found:
 
 Do not interpret or reorganize yet — just inventory what exists.
 
-### Step 2: Classify the Audience
+### Step 2: Infer Page Type and Classify Audience
+
+Run both inferences in parallel — they are independent and both feed into downstream skills.
+
+#### 2a — Infer Page Type
+
+Read the brief for the strongest content signals and match to the most probable page type. Do not force a match — if signals are mixed, flag as ambiguous and default to Product Landing.
+
+| Page Type | Strong Signals |
+|---|---|
+| **Product Landing** | Primary headline + feature list + product CTA + product description |
+| **Feature Detail** | Single feature deep-dive, per-feature screenshots, use case scenarios |
+| **Pricing** | Named pricing tiers with prices, plan comparison, billing FAQ |
+| **Home Page** | Multiple product or service references, brand-level headline, varied audience signals |
+| **About / Company** | Team members, company mission/values, founding story, culture content |
+| **Case Study** | Named customer + industry, problem statement, solution, results/metrics |
+| **Blog Article** | Author name + date, paragraph-form body copy, structured headings |
+| **Blog Index** | List of article titles + excerpts + dates, category filters |
+| **Event / Webinar** | Event name + date + time, speaker bios, agenda, registration CTA |
+| **Contact** | Contact form fields, email/phone, office address |
+| **Partner / Integrations** | Integration or partner names + logos + descriptions, filterable catalog |
+| **Resource / Download** | Downloadable asset titles, file types, form gate for access |
+| **Documentation Hub** | Structured nav hierarchy, technical instructions, code examples |
+| **Error Page** | Error code or message, navigation fallback, no structured content sections |
+
+**Ambiguity rule:** If a brief contains pricing tiers alongside features, infer Product Landing (pricing is a section, not the page type). If it explicitly names a page or URL slug, use that to resolve ambiguity. If uncertain after applying these rules, flag as ambiguous in the output and default to Product Landing.
+
+The page type inference feeds into:
+- `layout-patterns` → page assembly logic (Section 5)
+
+#### 2b — Classify the Audience
 
 Identify the target audience from the brief's context, explicit statements, or product category. Classify into one of these types:
 
@@ -55,36 +85,124 @@ Identify the target audience from the brief's context, explicit statements, or p
 | **Business decision-makers / executives** | ROI language, cost savings, compliance, scalability, "enterprise-grade" |
 | **Developers / DevOps engineers** | Code examples, CLI references, API-first language, open-source mentions |
 | **SMB owners / non-technical users** | Simple language, "easy setup", "no technical skills needed", affordability |
+| **General / consumer** | Non-technical tone, lifestyle language, broad appeal, no product category jargon |
 | **Mixed / multi-persona** | Brief contains sections clearly targeting different audiences |
 
 The audience classification feeds into:
-- `layout-patterns` → pattern selection logic
+- `layout-patterns` → page assembly constraints
 - `variation-explorer` → constraint filters
 - `trend-adapter` → audience alignment table
 
 ### Step 3: Identify Page Sections
 
-Group the inventoried content into page sections. Use these standard section types:
+Group the inventoried content into page sections using the section types below. The applicable set depends on the inferred page type from Step 2a — but any section type can appear on any page if the content warrants it.
 
-| Section Type | What It Contains | Required / Optional |
-|---|---|---|
-| **Hero** | Primary headline, subheadline, hero image/video, primary CTA | Required |
-| **Value Proposition** | Core benefits, elevator pitch, differentiators | Optional (can merge into hero) |
-| **Feature Overview** | Feature list with names, descriptions, icons/images | Required (at least one feature section) |
-| **Feature Deep-Dive** | Detailed feature walkthrough with screenshots, tabs, or expandable content | Optional |
-| **Social Proof** | Testimonials, customer quotes, case study excerpts | Optional but recommended |
-| **Trust Signals** | Partner/customer logos, certification badges, award icons | Optional but recommended |
-| **Statistics / Metrics** | Key numbers (uptime, users, savings) with context | Optional |
-| **Use Cases / Scenarios** | Audience-specific use case descriptions | Optional |
-| **Integration / Ecosystem** | Compatible tools, platforms, APIs | Optional |
-| **Pricing / Plans** | Pricing tiers, feature comparison tables | Optional |
-| **FAQ** | Common questions and answers | Optional |
-| **Closing CTA** | Final conversion section with CTA + reinforcement copy | Required |
+#### Core Sections (apply to most page types)
+
+| Section Type | What It Contains |
+|---|---|
+| **Page Hero** | Primary headline, subheadline, hero image/video, primary CTA |
+| **Value Proposition** | Core benefits, elevator pitch, differentiators (can merge into hero) |
+| **Feature Overview** | Feature list with names, descriptions, icons/images |
+| **Feature Deep-Dive** | Detailed feature walkthrough with screenshots, tabs, or expandable content |
+| **How It Works** | Step-by-step process explanation (3–6 steps with numbers/icons) |
+| **Social Proof** | Testimonials, customer quotes, case study excerpts |
+| **Trust Signals** | Partner/customer logos, certification badges, award icons |
+| **Statistics / Metrics** | Key numbers (uptime, users, savings, results) with context |
+| **Use Cases / Scenarios** | Audience-specific use case descriptions |
+| **Integration / Ecosystem** | Compatible tools, platforms, APIs |
+| **Pricing / Plans** | Pricing tiers, plan feature comparison |
+| **FAQ** | Common questions and answers |
+| **Closing CTA** | Final conversion section with CTA + reinforcement copy |
+
+#### Product & Feature Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Comparison Table** | Feature-by-feature comparison vs alternatives or across plans |
+| **Screenshots / Demo Gallery** | Product screenshots, UI walkthroughs, demo video embeds |
+| **Technical Specs** | Detailed spec lists, system requirements, API details |
+| **Related Features** | Links or cards pointing to adjacent features |
+
+#### About & Company Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Mission / Vision** | Company mission, vision statement, brand purpose |
+| **Company Story** | Founding story, history, milestones (often timeline format) |
+| **Team Members** | People cards with name, role, photo, optional bio |
+| **Company Values / Culture** | Value statements, culture description, workplace info |
+| **Press / Awards** | Press logos, award badges, media mentions |
+| **Investor / Partner Logos** | Investor names/logos, strategic partner logos |
+| **Office Locations** | Address(es), map, regional contact info |
+| **Open Roles CTA** | Careers link or job listing summary |
+
+#### Case Study Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Customer Overview** | Customer name, industry, company size, logo |
+| **Challenge / Problem** | The problem the customer faced before the solution |
+| **Solution Description** | How the product solved the problem |
+| **Results / Outcomes** | Quantified results, metrics, before/after data |
+| **Implementation Timeline** | How the solution was rolled out, phases or milestones |
+| **Customer Quote** | Direct attributed quote from the customer contact |
+
+#### Blog & Editorial Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Article Header** | Title, author name, publish date, reading time, category tags |
+| **Article Body** | Long-form paragraph content, structured with H2/H3 headings |
+| **Pull Quote / Callout** | Highlighted quote or key point pulled from the article body |
+| **Author Bio** | Author photo, name, role/title, brief bio |
+| **Related Articles** | Cards or links to related posts |
+| **Article Tags / Categories** | Topic classification for filtering and navigation |
+
+#### Event & Registration Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Event Details** | Event name, date, time, format (virtual/in-person), location |
+| **Countdown Timer** | Live countdown to event date |
+| **Speaker Profiles** | Speaker photo, name, title, company, bio |
+| **Agenda / Schedule** | Session list with times, titles, speakers |
+| **Registration Form** | Sign-up form fields, submit CTA |
+| **Past Event Highlights** | Photos, video clips, or stats from previous editions |
+| **Sponsor / Partner Logos** | Event sponsors displayed as logo bar |
+
+#### Navigation & Index Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Content Listing** | Grid or list of cards (articles, resources, integrations, case studies) |
+| **Filter / Category Bar** | Topic or type filters for a content index |
+| **Featured Item** | Highlighted single card at the top of an index |
+| **Pagination / Load More** | Page navigation or infinite scroll trigger |
+| **Search Bar** | Keyword search input for docs, resources, or catalog |
+
+#### Contact & Support Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Contact Form** | Name, email, message fields + submit |
+| **Contact Details** | Email address, phone number, support hours |
+| **Map** | Embedded map with office pin(s) |
+| **Support Channels** | Links to help docs, live chat, community forum |
+
+#### Universal Footer / Utility Sections
+
+| Section Type | What It Contains |
+|---|---|
+| **Newsletter Signup** | Email input + subscribe CTA (standalone, not closing CTA) |
+| **Resource Download** | Asset title, description, file type, download or gated form |
+| **Error Message** | Error code, friendly copy, navigation fallback |
 
 **Rules:**
-- Every brief must produce at minimum: Hero + at least one Feature section + Closing CTA
-- If the brief contains content that doesn't fit any standard section type, flag it as "unclassified" and note it for manual review
-- If the brief groups content differently than these types, respect the brief's grouping but map each group to the closest section type
+- Map every block of content to the closest section type above
+- If content doesn't fit any type, flag it as "unclassified" and note it for manual review
+- Respect the brief's groupings — don't restructure content, just classify it
+- A brief may produce sections from multiple categories (e.g. a product landing page can include a How It Works and a Case Study excerpt)
 
 ### Step 4: Flag Content Gaps
 
@@ -110,10 +228,11 @@ Compare the identified sections against the brief content. Flag any of these iss
 The final output of brief parsing is a structured summary that downstream files consume:
 
 ```markdown
-## Parsed Brief: {Product Name}
+## Parsed Brief: {Product / Page Name}
 
 **Source file:** {brief-filename}
-**Audience:** {audience type from Step 2}
+**Page type:** {inferred page type from Step 2a} {— "ambiguous, defaulting to Product Landing" if applicable}
+**Audience:** {audience type from Step 2b}
 **Date parsed:** {YYYY-MM-DD}
 
 ### Sections Identified
@@ -220,10 +339,10 @@ After parsing, the structured output feeds into these files based on the active 
 
 | Downstream File | What It Receives | Purpose |
 |---|---|---|
-| `layout-patterns` | Section list + audience type + feature count | Selects the page layout pattern |
+| `layout-patterns` | Inferred page type + section list + audience type + feature count + asset availability | Selects applicable sections and layout types via page assembly logic |
 | `component-library` | Section types + content volume per section | Selects component configurations for each section |
-| `design-tokens` | Audience type (for tone-appropriate token selection) | Confirms token set to use |
-| `variation-explorer` | Full parsed brief + content gaps + audience type | Generates variant specs with constraint filters |
+| `design-tokens` | Audience type | Confirms tone-appropriate token set |
+| `variation-explorer` | Full parsed brief + inferred page type + content gaps + audience type | Generates variant specs with constraint filters |
 | `trend-adapter` | Audience type | Aligns trend recommendations to audience expectations |
 
 The parsed brief is consumed by these files — it is never modified after Step 5. If the brief changes, re-run the full parsing process.

@@ -1,7 +1,7 @@
 ---
 name: trend-adapter
 description: Ingests external design trends and translates them into brand-safe token overrides and layout modifications. Defines 7 trend dimensions, named profiles, and competitor scan process. Use when adapting landing page designs to current visual trends, applying trend profiles, or doing competitive design analysis.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # Trend Adaptation — Token Overrides & Layout Modifications
@@ -92,7 +92,7 @@ Where the visual emphasis falls on the page.
 | `distributed` | Hero reduced to 50–60vh; each section carries its own visual anchor | Sustained engagement, more scroll motivation |
 | `bento` | Hero minimal or absent; content organized in asymmetric card grid | Modern, editorial, non-linear browsing |
 
-→ For bento grid layout rules: see `layout-patterns/SKILL.md` Section 6
+→ For bento grid layout rules: see `layout-patterns/SKILL.md` Section 7
 → For bento grid CSS: see `css-js-generator/SKILL.md` Section 6
 
 ### 2.5 — Interaction Pattern

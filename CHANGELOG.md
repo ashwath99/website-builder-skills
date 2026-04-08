@@ -6,6 +6,38 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.1] — 2026-04-09
+
+### Changed
+
+- **`layout-patterns` — full rewrite to page layout system** — Expanded from 6 fixed landing page patterns to a full page layout system covering 14 marketing website page types. Key additions:
+  - **Section Layout Types** (Section 3) — 20 named layout types across 5 categories: horizontal splits (`split-50`, `split-60-40`, `split-reverse`, etc.), grid layouts (`grid-2col` through `bento`, `masonry`, `card-index`), sidebar layouts (`sidebar-left`, `sidebar-right`, `sticky-sidebar`), linear layouts (`timeline`, `step-flow`, `accordion-stack`, `tab-panel`), and specialty layouts (`comparison-table`, `media-gallery`, `form-focused`, `map-content`, `stat-band`, `logo-bar`, `quote-callout`).
+  - **Page Type Inference** (Section 4) — Content signal tables for all 14 page types (Product Landing, Feature Detail, Pricing, Home, About, Case Study, Blog Article, Blog Index, Event/Webinar, Contact, Partner/Integrations, Resource/Download, Documentation Hub, Error). Includes ambiguity resolution rules and multi-page brief handling.
+  - **Page Assembly Logic** (Section 5) — Per-page-type section applicability tables with layout type options and required/optional status. Replaces the previous 6 pre-built fixed patterns.
+  - **Universal Sequencing Rules** (Section 6) — Promoted from pattern-specific rules to universal hard and soft rules applying across all page types.
+  - Bento grid moved to Section 7, Step Flow layout moved to Section 8 as named layout reference sections.
+  - Boundary clarification: section layout types (split, sidebar, bento, etc.) now owned by `layout-patterns`; `component-library` retains component identity and content slots only.
+
+- **`brief-parser` — targeted update for full-site scope** — Three focused changes:
+  - **Step 2 split into 2a and 2b** — Added page type inference pass (2a) alongside audience classification (2b). Inference reads content signals and matches to one of 14 page types with an explicit ambiguity resolution rule.
+  - **Step 3 section types expanded** — From 12 landing-page-specific types to 45+ types organised across 8 categories: Core, Product & Feature, About & Company, Case Study, Blog & Editorial, Event & Registration, Navigation & Index, Contact & Support, plus Universal utility sections.
+  - **Section 5 handoff updated** — `layout-patterns` now receives inferred page type + asset availability in addition to section list + audience type + feature count.
+  - Added "General / consumer" as a sixth audience type to cover non-B2B page types.
+  - Frontmatter description updated to reflect full-site scope ("web page structure" replaces "landing page structure").
+
+- **Cross-reference fixes** across 5 dependent skills to reflect new section numbering in `layout-patterns`:
+  - `trend-adapter` — bento ref updated to Section 7
+  - `variation-explorer` — sequencing rules ref updated to Section 6, bento ref to Section 7, validation checklist updated
+  - `execution-prompts` — "select layout pattern" wording updated to "infer page type and select layout types" (3 instances)
+  - `figma-frame-builder` — instruction step updated to match new inference-first flow
+  - `master-reference` — ownership table updated with new `layout-patterns` responsibilities
+
+### Removed
+
+- **`v4.0/` folder** — Removed legacy v4.0 skill files from repository. Historical context preserved in CHANGELOG.
+
+---
+
 ## [5.0] — 2026-04-07
 
 ### Added

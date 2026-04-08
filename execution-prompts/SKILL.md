@@ -1,7 +1,7 @@
 ---
 name: execution-prompts
 description: Master prompt templates for executing the landing page pipeline through AI coding agents. Contains Mode A/B/C templates, shared preamble, Page Blueprint format, prompt modifiers, and validation checklists. Use when starting any execution mode, writing agent prompts, or validating output.
-version: "5.0"
+version: "5.0.1"
 ---
 
 # Agent Execution Prompt — Master Templates
@@ -84,7 +84,7 @@ Content Brief: {brief-filename}
 
 Using these skill files:
 1. Parse the brief using brief-parser/SKILL.md — confirm sections and flag any content gaps
-2. Select the best layout pattern from layout-patterns/SKILL.md for this content and audience
+2. Infer the page type and select layout types from layout-patterns/SKILL.md for this content and audience
 3. Map each content section to components from component-library/SKILL.md
 4. Apply design tokens from design-tokens/SKILL.md
 5. Search the connected design system for reusable components before creating new ones
@@ -103,7 +103,7 @@ START — Deploy Figma design
 1. Reads all referenced skill files
 2. Confirms MCP server connection and `/figma-use` skill availability
 3. Parses the content brief — identifies sections, flags gaps, classifies audience
-4. Selects a layout pattern — matches brief content to patterns in `layout-patterns/SKILL.md`
+4. Infers page type and selects layout types — reads content signals from parsed brief, maps to page type, assigns section layout types from `layout-patterns/SKILL.md`
 5. Maps content to components — assigns each section a component from `component-library/SKILL.md`
 6. Searches design system for existing library components to reuse
 7. Resolves design tokens — applies values from `design-tokens/SKILL.md`, binds to Figma variables when available
@@ -210,7 +210,7 @@ Content Brief: {brief-filename}
 Using these skill files, execute the full pipeline from brief to production code:
 
 1. Parse the brief using brief-parser/SKILL.md — confirm sections and flag gaps
-2. Select layout pattern from layout-patterns/SKILL.md
+2. Infer page type and select layout types from layout-patterns/SKILL.md
 3. Map content to components from component-library/SKILL.md
 4. Apply design tokens from design-tokens/SKILL.md
 5. Write the Page Blueprint as {product}-blueprint.md
