@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.2] — 2026-04-09
+
+### Changed
+
+- **`component-library` — expanded to full-site component set** — Grew from 14 landing-page components to 30 components covering all 14 marketing website page types. Key additions:
+  - **People & Profile** (Section 7): Team Card, Author Bio, Speaker Card
+  - **Timeline & Process** (Section 8): Timeline, Agenda List, Countdown Timer, Event Details Block
+  - **Navigation & Index** (Section 9): Article Card, Filter Bar, Search Bar, Pagination
+  - **Form** (Section 10): Single generic Form component with variants — `contact`, `registration`, `newsletter`, `download-gate`, `multi-step`
+  - **Media** (Section 11): Media Gallery, Map Embed
+  - **Content** (Section 6, extended): Pull Quote, Rich Text Block, Download Card
+  - **Boundary note added** — clarifies component-library owns what a component IS (slots, purpose, variants); spatial arrangement is owned by `layout-patterns`
+  - **Component Selection Logic** (Section 1) expanded — 30 content-type rows, page-type-aware form and index selection rules added
+  - **Section-to-Component Mapping** (Section 12) expanded from 11 to 45+ section types across 8 categories, aligned with `brief-parser` section taxonomy
+
+---
+
 ## [5.0.1] — 2026-04-09
 
 ### Changed
