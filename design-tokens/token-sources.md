@@ -50,11 +50,19 @@ Extracted values must be mapped to the canonical token names defined in `design-
 
 **Permission requirement:** Before fetching any website URL, the agent must confirm with the user that the URL is accessible and that they have permission to use it as a design reference. See `pipeline-workflow/SKILL.md` — URL Access Permission section.
 
-**Fetch method (hardcoded):** Use the `WebFetch` tool to retrieve the page HTML and linked stylesheets. This is the only permitted method for URL-based extraction.
-- Do **not** use `curl`, `wget`, Python `requests`, or any shell-based HTTP fetch
-- Do **not** attempt browser automation or headless Chrome
-- If `WebFetch` fails or is unavailable, do **not** retry with alternative tools — inform the user and suggest providing a screenshot (Source 6) or exporting CSS/JSON manually (Source 7) instead
-- Fetch the URL **once only** — do not re-fetch or crawl linked pages unless the user explicitly asks
+**Fetch method (hardcoded):** Use `curl` via Bash to retrieve raw HTML and CSS files. This is the only permitted method — raw content is required for precise token extraction.
+
+1. `curl -s <URL>` — fetch the page HTML
+2. Parse `<link rel="stylesheet" href="...">` tags to find CSS file URLs
+3. `curl -s <CSS_URL>` — fetch each linked stylesheet
+4. Extract from the raw CSS: `:root {}` custom properties, element styles, computed values
+
+**Rules:**
+- Do **not** use `WebFetch` — it processes content through an AI model and loses raw CSS precision
+- Do **not** use Python `requests`, `wget`, or browser automation
+- Do **not** attempt alternative tools if `curl` fails — inform the user and suggest: screenshot (Source 6), manual CSS export, or JSON token file (Source 7)
+- Fetch the page **once only** — do not re-fetch or crawl linked pages unless the user explicitly asks
+- Maximum 5 stylesheet fetches per page (main CSS + up to 4 linked sheets)
 
 **Extraction is split into two tracks:** color extraction (coverage-based classification) and non-color extraction (CSS property mapping). These run in parallel.
 

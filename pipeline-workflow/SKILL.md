@@ -41,17 +41,40 @@ This skill file system enables AI agents to convert marketing content briefs int
 
 ### Figma MCP Server
 
-All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) by default. No local bridge or desktop app is required for most workflows.
+All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) exclusively. No local bridge or desktop app.
+
+→ **For the latest tool list and updates:** https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/
+
+#### Core Tools (used by the builder pipeline)
 
 | Capability | Tool | Notes |
 |---|---|---|
-| Write to Figma canvas | `use_figma` | Requires `/figma-use` skill. Creates, edits, deletes frames, components, variables, styles, text, images. |
+| Write to Figma canvas | `use_figma` | Creates, edits, deletes frames, components, variables, styles, text, images. |
 | Read design context | `get_design_context` | Returns structured layout, spacing, colors, typography from a frame or selection. |
-| Read tokens & variables | `use_figma` (Plugin API script) | Extracts variables and formats as CSS custom properties. See Master Reference for script. |
+| Read variables & styles | `get_variable_defs` | Returns variables and styles used in a selection (colors, spacing, typography). |
 | Search design system | `search_design_system` | Finds components, variables, styles across connected libraries. |
-| Push HTML to Figma | `generate_figma_design` | Converts rendered HTML into editable Figma layers. |
+| Take screenshot | `get_screenshot` | Captures a screenshot of a frame or selection for visual comparison. |
+| Create new file | `create_new_file` | Creates a new blank Figma Design or FigJam file in user's drafts. |
 
-→ Full tool details: see `figma-frame-builder` Section 2 and `figma-code-extractor` Section 2
+#### Additional Tools (available but not core to the pipeline)
+
+| Capability | Tool | Notes |
+|---|---|---|
+| Generate FigJam diagram | `generate_diagram` | Creates FigJam diagrams from natural language (Mermaid syntax). |
+| Read FigJam content | `get_figjam` | Returns FigJam board content and metadata. |
+| Get node metadata | `get_metadata` | Returns layer IDs, names, types, positions, sizes for nodes. |
+| Create design system rules | `create_design_system_rules` | Defines rules for the design system. |
+
+#### Code Connect Tools
+
+| Capability | Tool | Notes |
+|---|---|---|
+| Get existing mappings | `get_code_connect_map` | Returns current component-to-code mappings. |
+| Suggest mappings | `get_code_connect_suggestions` | Detects and suggests Figma component → code component mappings. |
+| Confirm mappings | `send_code_connect_mappings` | Confirms suggested Code Connect mappings. |
+| Add mapping | `add_code_connect_map` | Adds a new component-to-code mapping. |
+
+→ Tool usage details: see `figma-frame-builder` Section 2 and `figma-code-extractor` Section 2
 
 ---
 
@@ -59,22 +82,14 @@ All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) by de
 
 ### Figma Tools (All)
 
-**All** Figma interactions use the remote MCP plugin (`mcp.figma.com/mcp`) exclusively. This applies to every Figma tool — not just `use_figma`:
-
-| Tool | Source | Never use alternative |
-|---|---|---|
-| `use_figma` | Remote MCP plugin only | No desktop bridge, no local Figma API |
-| `get_design_context` | Remote MCP plugin only | No desktop bridge, no local Figma API |
-| `get_variable_defs` | Remote MCP plugin only | No desktop bridge, no local Figma API |
-| `search_design_system` | Remote MCP plugin only | No desktop bridge, no local Figma API |
-| `get_screenshot` | Remote MCP plugin only | No desktop bridge, no local Figma API |
-| `generate_figma_design` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+**All** Figma interactions use the remote MCP plugin (`mcp.figma.com/mcp`) exclusively. This applies to every Figma tool — all 14 tools listed in the Figma MCP Server section above.
 
 **Hardcoded rules:**
 1. The agent must **never** search for, launch, or attempt to connect to the Figma Desktop Bridge or any local Figma application
 2. The agent must **never** attempt tool discovery at runtime — if a Figma tool is not already available in the current MCP session, it is not available
 3. If Figma tools are not available, inform the user: "Figma access requires the Figma MCP plugin (available for Claude Code and Cursor). Install it and reconnect."
 4. Do not attempt alternative methods — no desktop bridge, no local API, no browser automation, no Figma REST API calls via curl/fetch
+5. When new tools become available from Figma, verify against the official docs before using: https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/
 
 ### URL Access Permission
 
