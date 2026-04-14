@@ -51,7 +51,7 @@ How much breathing room exists between and within sections.
 | `standard` | Default values from `design-tokens/SKILL.md` | Current baseline |
 | `compact` | `space-section` reduced ~35%; `grid-gutter` reduced ~20% | Information-dense, SaaS-dashboard feel, more content above fold |
 
-→ Spacing tokens being modified are defined in `design-tokens/SKILL.md` Section 4
+→ Spacing tokens being modified are defined in `design-tokens/SKILL.md` Section 5
 
 ### 2.2 — Typography Scale
 
@@ -65,7 +65,7 @@ The ratio between heading sizes and body text.
 
 **Invariant check:** Font family never changes. Only size, weight, line-height, and letter-spacing are adjustable.
 
-→ Typography tokens being modified are defined in `design-tokens/SKILL.md` Section 3
+→ Typography tokens being modified are defined in `design-tokens/SKILL.md` Section 4
 
 ### 2.3 — Color Temperature
 

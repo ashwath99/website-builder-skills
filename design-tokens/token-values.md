@@ -16,10 +16,10 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                            | Placeholder In                   | Value           |
 | -------------------------------- | -------------------------------- | --------------- |
-| Heading font (`font-heading`)    | `design-tokens/SKILL.md` Section 1, 3.1 | `{PLACEHOLDER}` |
-| Heading font CDN URL             | `design-tokens/SKILL.md` Section 3.1    | `{PLACEHOLDER}` |
-| Body font (`font-body`)          | `design-tokens/SKILL.md` Section 1, 3.1 | `{PLACEHOLDER}` |
-| Monospace font (`font-mono`)     | `design-tokens/SKILL.md` Section 3.1    | `{PLACEHOLDER}` |
+| Heading font (`font-heading`)    | `design-tokens/SKILL.md` Section 1, 4.1 | `{PLACEHOLDER}` |
+| Heading font CDN URL             | `design-tokens/SKILL.md` Section 4.1    | `{PLACEHOLDER}` |
+| Body font (`font-body`)          | `design-tokens/SKILL.md` Section 1, 4.1 | `{PLACEHOLDER}` |
+| Monospace font (`font-mono`)     | `design-tokens/SKILL.md` Section 4.1    | `{PLACEHOLDER}` |
 
 
 ---
@@ -88,14 +88,14 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token               | Placeholder In                | Value           |
 | ------------------- | ----------------------------- | --------------- |
-| `font-size-display` | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-h1`      | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-h2`      | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-h3`      | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-h4`      | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-body-lg` | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-body`    | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
-| `font-size-body-sm` | `design-tokens/SKILL.md` Section 3.2 | `{PLACEHOLDER}` |
+| `font-size-display` | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-h1`      | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-h2`      | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-h3`      | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-h4`      | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-body-lg` | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-body`    | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `font-size-body-sm` | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
 
 
 ### Weights
@@ -103,10 +103,10 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                  | Placeholder In                | Value           |
 | ---------------------- | ----------------------------- | --------------- |
-| `font-weight-bold`     | `design-tokens/SKILL.md` Section 3.3 | `{PLACEHOLDER}` |
-| `font-weight-semibold` | `design-tokens/SKILL.md` Section 3.3 | `{PLACEHOLDER}` |
-| `font-weight-regular`  | `design-tokens/SKILL.md` Section 3.3 | `{PLACEHOLDER}` |
-| `font-weight-light`    | `design-tokens/SKILL.md` Section 3.3 | `{PLACEHOLDER}` |
+| `font-weight-bold`     | `design-tokens/SKILL.md` Section 4.3 | `{PLACEHOLDER}` |
+| `font-weight-semibold` | `design-tokens/SKILL.md` Section 4.3 | `{PLACEHOLDER}` |
+| `font-weight-regular`  | `design-tokens/SKILL.md` Section 4.3 | `{PLACEHOLDER}` |
+| `font-weight-light`    | `design-tokens/SKILL.md` Section 4.3 | `{PLACEHOLDER}` |
 
 
 ### Line Heights
@@ -114,9 +114,9 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                 | Placeholder In                | Value           |
 | --------------------- | ----------------------------- | --------------- |
-| `line-height-heading` | `design-tokens/SKILL.md` Section 3.4 | `{PLACEHOLDER}` |
-| `line-height-body`    | `design-tokens/SKILL.md` Section 3.4 | `{PLACEHOLDER}` |
-| `line-height-tight`   | `design-tokens/SKILL.md` Section 3.4 | `{PLACEHOLDER}` |
+| `line-height-heading` | `design-tokens/SKILL.md` Section 4.4 | `{PLACEHOLDER}` |
+| `line-height-body`    | `design-tokens/SKILL.md` Section 4.4 | `{PLACEHOLDER}` |
+| `line-height-tight`   | `design-tokens/SKILL.md` Section 4.4 | `{PLACEHOLDER}` |
 
 
 ### Letter Spacing
@@ -124,8 +124,8 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                    | Placeholder In                | Value           |
 | ------------------------ | ----------------------------- | --------------- |
-| `letter-spacing-heading` | `design-tokens/SKILL.md` Section 3.5 | `{PLACEHOLDER}` |
-| `letter-spacing-caps`    | `design-tokens/SKILL.md` Section 3.5 | `{PLACEHOLDER}` |
+| `letter-spacing-heading` | `design-tokens/SKILL.md` Section 4.5 | `{PLACEHOLDER}` |
+| `letter-spacing-caps`    | `design-tokens/SKILL.md` Section 4.5 | `{PLACEHOLDER}` |
 
 
 ---
@@ -137,14 +137,14 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token        | Placeholder In                | Value           |
 | ------------ | ----------------------------- | --------------- |
-| `space-unit` | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-xs`   | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-sm`   | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-md`   | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-lg`   | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-xl`   | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-2xl`  | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
-| `space-3xl`  | `design-tokens/SKILL.md` Section 4.1 | `{PLACEHOLDER}` |
+| `space-unit` | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-xs`   | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-sm`   | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-md`   | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-lg`   | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-xl`   | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-2xl`  | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
+| `space-3xl`  | `design-tokens/SKILL.md` Section 5.1 | `{PLACEHOLDER}` |
 
 
 ### Layout Spacing
@@ -152,13 +152,13 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                      | Placeholder In                | Value           |
 | -------------------------- | ----------------------------- | --------------- |
-| `section-padding-y`        | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
-| `section-padding-y-lg`     | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
-| `content-max-width`        | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
-| `content-max-width-narrow` | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
-| `sidebar-width`            | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
-| `grid-gutter`              | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
-| `card-padding`             | `design-tokens/SKILL.md` Section 4.2 | `{PLACEHOLDER}` |
+| `section-padding-y`        | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
+| `section-padding-y-lg`     | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
+| `content-max-width`        | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
+| `content-max-width-narrow` | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
+| `sidebar-width`            | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
+| `grid-gutter`              | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
+| `card-padding`             | `design-tokens/SKILL.md` Section 5.2 | `{PLACEHOLDER}` |
 
 
 ---
@@ -168,9 +168,9 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token       | Placeholder In              | Value           |
 | ----------- | --------------------------- | --------------- |
-| `shadow-sm` | `design-tokens/SKILL.md` Section 5 | `{PLACEHOLDER}` |
-| `shadow-md` | `design-tokens/SKILL.md` Section 5 | `{PLACEHOLDER}` |
-| `shadow-lg` | `design-tokens/SKILL.md` Section 5 | `{PLACEHOLDER}` |
+| `shadow-sm` | `design-tokens/SKILL.md` Section 6 | `{PLACEHOLDER}` |
+| `shadow-md` | `design-tokens/SKILL.md` Section 6 | `{PLACEHOLDER}` |
+| `shadow-lg` | `design-tokens/SKILL.md` Section 6 | `{PLACEHOLDER}` |
 
 
 ---
@@ -180,9 +180,9 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token       | Placeholder In              | Value           |
 | ----------- | --------------------------- | --------------- |
-| `radius-sm` | `design-tokens/SKILL.md` Section 6 | `{PLACEHOLDER}` |
-| `radius-md` | `design-tokens/SKILL.md` Section 6 | `{PLACEHOLDER}` |
-| `radius-lg` | `design-tokens/SKILL.md` Section 6 | `{PLACEHOLDER}` |
+| `radius-sm` | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
+| `radius-md` | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
+| `radius-lg` | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
 
 
 ---
@@ -194,8 +194,8 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Property   | Placeholder In              | Value           |
 | ---------- | --------------------------- | --------------- |
-| Text color | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
-| Padding    | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
+| Text color | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
+| Padding    | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
 
 
 ### Secondary CTA
@@ -203,9 +203,9 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Property    | Placeholder In              | Value           |
 | ----------- | --------------------------- | --------------- |
-| Border      | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
-| Text color  | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
-| Hover state | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
+| Border      | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
+| Text color  | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
+| Hover state | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
 
 
 ### Tertiary CTA (Text Link)
@@ -213,9 +213,9 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Property        | Placeholder In              | Value           |
 | --------------- | --------------------------- | --------------- |
-| Text color      | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
-| Text decoration | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
-| Hover state     | `design-tokens/SKILL.md` Section 7 | `{PLACEHOLDER}` |
+| Text color      | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
+| Text decoration | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
+| Hover state     | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
 
 
 ---
@@ -225,12 +225,12 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Property              | Placeholder In              | Value           |
 | --------------------- | --------------------------- | --------------- |
-| Default icon size     | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
-| Feature icon size     | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
-| Icon color (light bg) | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
-| Icon color (dark bg)  | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
-| Icon style            | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
-| Icon stroke width     | `design-tokens/SKILL.md` Section 8 | `{PLACEHOLDER}` |
+| Default icon size     | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
+| Feature icon size     | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
+| Icon color (light bg) | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
+| Icon color (dark bg)  | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
+| Icon style            | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
+| Icon stroke width     | `design-tokens/SKILL.md` Section 9 | `{PLACEHOLDER}` |
 
 
 ---
@@ -240,13 +240,13 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                    | Placeholder In                       | Value           |
 | ------------------------ | ------------------------------------ | --------------- |
-| `input-height`           | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
-| `input-bg`               | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
-| `input-border`           | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
-| `input-border-focus`     | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
-| `input-radius`           | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
-| `input-placeholder-color`| `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
-| `input-padding`          | `design-tokens/SKILL.md` Section 9   | `{PLACEHOLDER}` |
+| `input-height`           | `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
+| `input-bg`               | `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
+| `input-border`           | `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
+| `input-border-focus`     | `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
+| `input-radius`           | `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
+| `input-placeholder-color`| `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
+| `input-padding`          | `design-tokens/SKILL.md` Section 10   | `{PLACEHOLDER}` |
 
 
 ---
@@ -256,18 +256,18 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Property               | Placeholder In               | Value           |
 | ---------------------- | ---------------------------- | --------------- |
-| Screenshot border      | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
-| Screenshot shadow      | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
-| Screenshot radius      | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
-| Hero image max height  | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
-| Thumbnail aspect ratio | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
-| Avatar size            | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
-| Map embed height       | `design-tokens/SKILL.md` Section 10 | `{PLACEHOLDER}` |
+| Screenshot border      | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
+| Screenshot shadow      | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
+| Screenshot radius      | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
+| Hero image max height  | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
+| Thumbnail aspect ratio | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
+| Avatar size            | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
+| Map embed height       | `design-tokens/SKILL.md` Section 11 | `{PLACEHOLDER}` |
 
 
 ---
 
-## 13 — Component-Level Placeholders
+## 14 — Component-Level Placeholders
 
 These appear in `component-library/SKILL.md` and reference tokens from above.
 

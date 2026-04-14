@@ -97,7 +97,7 @@ Overall spacing and content volume. Controlled by token overrides, not structura
 | `standard` | Default token values from `design-tokens` |
 | `comprehensive` | `space-section` reduced, 8–10+ sections, tighter vertical rhythm |
 
-→ Spacing tokens: see `design-tokens` Section 4
+→ Spacing tokens: see `design-tokens` Section 5
 → If a Trend Adaptation Brief is active, its spatial density setting becomes the default for this axis
 
 ### 2.6 — Social Proof Placement

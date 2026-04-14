@@ -44,42 +44,79 @@ Extracted values must be mapped to the canonical token names defined in `design-
 
 ---
 
-## Source 3 — Website URL (CSS Extraction)
+## Source 3 — Website URL
 
 **Recognition signal:** A website URL is provided alongside the brief or as a reference.
 
-**Extraction steps:**
+**Permission requirement:** Before fetching any website URL, the agent must confirm with the user that the URL is accessible and that they have permission to use it as a design reference. See `pipeline-workflow/SKILL.md` — URL Access Permission section.
 
-1. **Fetch the page CSS** — load the page and retrieve all linked stylesheets. Prioritize the main stylesheet.
+**Extraction is split into two tracks:** color extraction (coverage-based classification) and non-color extraction (CSS property mapping). These run in parallel.
 
-2. **Extract CSS custom properties** — scan for `:root { }` declarations and collect all `--*` variables with their values:
-   ```css
-   :root {
-     --primary-color: #E9142B;
-     --font-heading: 'ZohoPuvi', sans-serif;
-     --spacing-md: 16px;
-   }
-   ```
+---
 
-3. **If no custom properties exist**, extract computed values for key selectors:
-   - Primary button background → `color-primary`
-   - Body font-family → `font-body`
-   - H1 font-size → `font-size-display` or `font-size-h1`
-   - Section padding → `section-padding-y`
+### Track A — Color Extraction (Coverage-Based)
 
-4. **Apply token name normalization** (see Section 8) to map CSS variable names to canonical token names.
+Colors cannot be reliably classified from CSS property names alone. Instead, collect all colors first, rank by visual weight, then assign roles.
 
-5. **Verify values** — for color values, confirm they are valid hex, rgb(), or hsl(). For sizes, confirm units (prefer px or rem).
+**Step 1 — Collect all colors from the page:**
+- CSS custom properties (`:root {}` and scoped vars) — all color-valued `--*` declarations
+- Computed `background-color` on all visible elements
+- Computed `color` on all text elements
+- Computed `border-color` on cards, buttons, dividers
+- Gradient color stops (`linear-gradient`, `radial-gradient`)
+- SVG `fill` and `stroke` values
+- Note any `background-image` URLs on hero/banner sections (for Step 4)
 
-6. **Flag gaps** — canonical tokens with no match in the extracted CSS are left as `{PLACEHOLDER}`.
+**Step 2 — Calculate % coverage:**
+- Weight each unique color by: (number of elements using it) × (estimated visual area of those elements)
+- Group similar colors within a close perceptual range (e.g. `#E9142B` and `#EA1529`) as one color
+- Separate chromatic colors (hues with saturation) from achromatic (white, black, grays)
 
-**Common extraction targets by token category:**
+**Step 3 — Classify by coverage rank:**
+
+| Rank | Classification | Token Assignment |
+|---|---|---|
+| Highest-coverage chromatic color (typically 50%+ of brand-colored areas) | Primary brand color | `color-primary` |
+| Derive from primary: darken ~10% | Primary hover | `color-primary-hover` |
+| Derive from primary: darken ~15% | Primary active | `color-primary-active` |
+| Second-highest chromatic color (if distinct from primary) | Secondary brand color | `color-secondary` |
+| Light achromatic covering the largest page area | Page background | `color-bg-page` |
+| Slightly different light neutral on cards/components | Surface background | `color-bg-surface` |
+| Darkest color used on body/paragraph text | Primary text | `color-text-primary` |
+| Medium-contrast color used on descriptions/metadata | Secondary text | `color-text-secondary` |
+| Lightest/muted text color (captions, hints) | Tertiary text | `color-text-tertiary` |
+| Light color used on text over dark/primary backgrounds | Inverse text | `color-text-inverse` |
+
+**Step 4 — Derive tinted section colors from primary/secondary:**
+- Identify section backgrounds that use a tinted/translucent version of the primary color → `tint-1`
+- Identify any secondary-tinted section backgrounds → `tint-2`
+- Identify any neutral gray section backgrounds → `tint-3`
+- If a dark section background exists (footer, hero) → `tint-4`
+- Derive matching border colors per tint from visible card/component borders within those sections
+
+**Step 5 — Hero/banner image edge case:**
+- If the hero section uses a `background-image` (not a solid CSS color), the primary brand color may be hidden inside that image
+- CSS extraction alone will miss this — flag as: `/* color-primary may be embedded in hero background image — visual verification recommended */`
+- If a screenshot source is also available, cross-reference with Source 6 to catch this
+
+---
+
+### Track B — Non-Color Extraction (CSS Property Mapping)
+
+Typography, spacing, shadows, radius, and other non-color tokens are extracted by matching CSS properties/selectors to token names.
+
+**Step 1 — Extract CSS custom properties** — scan `:root {}` for non-color `--*` variables:
+```css
+:root {
+  --font-heading: 'ZohoPuvi', sans-serif;
+  --spacing-md: 16px;
+}
+```
+
+**Step 2 — If no custom properties exist**, extract computed values:
 
 | Token Category | CSS Selector / Property to Target |
 |---|---|
-| `color-primary` | Primary button background-color, `.btn-primary`, `[class*="primary"]` background |
-| `color-text-primary` | `body` or `p` color |
-| `color-bg-page` | `body` background-color |
 | `font-heading` | `h1`, `h2` font-family |
 | `font-body` | `body`, `p` font-family |
 | `font-size-display` | `h1` font-size on hero sections |
@@ -92,7 +129,17 @@ Extracted values must be mapped to the canonical token names defined in `design-
 | `radius-md` | Card border-radius |
 | `shadow-md` | Card box-shadow |
 
-**Limitation:** CSS extraction cannot reliably recover all tokens, especially spacing scale values and tint pairs. Expect gaps and flag them.
+**Step 3 — Apply token name normalization** (see Section 8) for any CSS custom property names.
+
+**Step 4 — Verify values** — for sizes, confirm units (prefer px or rem).
+
+---
+
+### Combined Output
+
+Merge Track A (color tokens) and Track B (non-color tokens) into a single resolved set. Flag gaps for any canonical token without a match.
+
+**Limitation:** CSS extraction may miss colors embedded in images, and cannot reliably recover all spacing scale steps. Cross-reference with a screenshot source when possible.
 
 ---
 
@@ -174,36 +221,74 @@ Extracted values must be mapped to the canonical token names defined in `design-
 
 **Recognition signal:** A `.png`, `.jpg`, `.webp`, or similar image file is attached.
 
-**Extraction steps:**
+**Extraction is split into two tracks:** color extraction (visual coverage-based) and non-color extraction (visual estimation). Same principle as Source 3 — classify colors by dominance, not by guessing their role from context.
 
-1. **Visual color extraction:**
-   - Identify the dominant brand color (typically used on the primary CTA button) → `color-primary`
-   - Identify the page background color → `color-bg-page`
-   - Identify the primary text color → `color-text-primary`
-   - Identify secondary text color (descriptions, metadata) → `color-text-secondary`
-   - Identify card/surface backgrounds if distinguishable from page background → `color-bg-surface`
-   - Identify any tinted section backgrounds → `tint-1`, `tint-2` surface colors
+---
 
-2. **Visual typography extraction:**
-   - Identify heading font style (serif, sans-serif, display, weight) — describe it; do not guess the exact font name → flag `font-heading` as `{PLACEHOLDER}` with a visual description note
-   - Identify body font style → same approach
-   - Estimate heading font size relative to body size → `font-size-display`, `font-size-h1`, `font-size-h2`
+### Track A — Visual Color Extraction (Coverage-Based)
 
-3. **Visual spacing estimation:**
-   - Estimate section vertical padding from visual breathing room → `section-padding-y`
-   - Estimate content max-width from visible content column relative to viewport → `content-max-width`
-   - Estimate card internal padding → `card-padding`
+**Step 1 — Scan ALL distinct colors visible in the screenshot:**
+- Background areas (page, sections, cards, hero)
+- Text colors (headings, body, captions)
+- UI element colors (buttons, icons, borders, accents)
+- Image-embedded colors (hero/banner images, illustrations)
+- Separate chromatic colors from achromatic (white, black, grays)
 
-4. **Visual shape extraction:**
-   - Identify border radius on buttons → `radius-sm`
-   - Identify border radius on cards → `radius-md`
-   - Identify shadow depth on cards → `shadow-sm`, `shadow-md`, `shadow-lg`, or `shadow-none`
+**Step 2 — Estimate % visual coverage for each color:**
+- Which chromatic color occupies the most visual real estate?
+- Which achromatic tones form the page/section backgrounds?
+- Which dark tones are used for text?
 
-5. **Flag all estimated values** — prefix estimated values with `/* estimated from screenshot */` comment in the output so they are clearly marked for human review before production use.
+**Step 3 — Classify by coverage rank:**
 
-6. **Flag what cannot be extracted** — font names, exact spacing values, hover states, semantic colors (`color-success`, `color-error`), and tinted section border colors cannot be reliably extracted from a static screenshot. Flag all as `{PLACEHOLDER}`.
+| Rank | Classification | Token Assignment |
+|---|---|---|
+| Highest-coverage chromatic color (across backgrounds, CTAs, accent areas) | Primary brand color | `color-primary` |
+| Derive from primary: estimate a darker shade | Primary hover | `color-primary-hover` |
+| Second chromatic color (if visibly distinct) | Secondary brand color | `color-secondary` |
+| Dominant light area | Page background | `color-bg-page` |
+| Slightly different light on cards/components | Surface background | `color-bg-surface` |
+| Darkest text tone | Primary text | `color-text-primary` |
+| Mid-contrast text tone | Secondary text | `color-text-secondary` |
+| Lightest text tone | Tertiary text | `color-text-tertiary` |
+| Light text visible on dark/colored backgrounds | Inverse text | `color-text-inverse` |
 
-**Limitation:** Screenshot extraction yields approximate values only. All extracted values should be verified against the actual product before production use. This source is best used as a starting point, not a final fill.
+**Step 4 — Derive tinted section colors:**
+- Same logic as Source 3 Step 4 — identify tinted section backgrounds and their relationship to primary/secondary colors
+
+**Step 5 — Hero/banner image check (critical):**
+- Screenshots often capture what CSS scraping misses: the primary brand color may dominate a hero background image, gradient overlay, or illustration
+- If the hero/banner shows a strong chromatic color that isn't present elsewhere as a CSS-applied color, it is likely the primary brand color
+- This is a key advantage of screenshot extraction over URL extraction
+
+---
+
+### Track B — Non-Color Visual Estimation
+
+**Step 1 — Typography:**
+- Identify heading font style (serif, sans-serif, display, weight) — describe visually; do not guess the exact font name → flag `font-heading` as `{PLACEHOLDER}` with a visual description note
+- Identify body font style → same approach
+- Estimate heading font size relative to body size → `font-size-display`, `font-size-h1`, `font-size-h2`
+
+**Step 2 — Spacing:**
+- Estimate section vertical padding from visual breathing room → `section-padding-y`
+- Estimate content max-width from visible content column relative to viewport → `content-max-width`
+- Estimate card internal padding → `card-padding`
+
+**Step 3 — Shape & elevation:**
+- Identify border radius on buttons → `radius-sm`
+- Identify border radius on cards → `radius-md`
+- Identify shadow depth on cards → `shadow-sm`, `shadow-md`, `shadow-lg`, or `shadow-none`
+
+---
+
+### Output Rules
+
+- **Flag all estimated values** — prefix with `/* estimated from screenshot */` in the output for human review before production use
+- **Flag what cannot be extracted** — font names, exact spacing values, hover states, semantic colors (`color-success`, `color-error`), and tinted section border colors cannot be reliably extracted from a static screenshot. Flag all as `{PLACEHOLDER}`.
+- **Cross-reference when possible** — if a URL source is also available, use URL extraction for precise values and screenshot extraction to catch hero/banner image colors that CSS misses
+
+**Limitation:** Screenshot extraction yields approximate values only. Best used as a starting point, or in combination with Source 3 for hero image color recovery.
 
 ---
 

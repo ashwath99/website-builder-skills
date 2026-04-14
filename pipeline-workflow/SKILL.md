@@ -1,7 +1,7 @@
 ---
 name: pipeline-workflow
 description: Establishes the execution pipeline, defines modes A/B/C, and specifies skill file reading order for converting marketing briefs into Figma designs and production code. Use when starting any website builder session, planning a new landing page, or needing to understand the execution workflow and mode definitions.
-version: "5.0.4"
+version: "5.0.5"
 ---
 
 # Workflow — Pipeline Context
@@ -27,6 +27,31 @@ All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) by de
 | Push HTML to Figma | `generate_figma_design` | Converts rendered HTML into editable Figma layers. |
 
 → Full tool details: see `figma-frame-builder` Section 2 and `figma-code-extractor` Section 2
+
+---
+
+## Tool Permissions & Restrictions
+
+### use_figma Tool
+
+`use_figma` is **only** available via the remote MCP server (`mcp.figma.com/mcp`). The agent must never search for, launch, or attempt to connect to the Figma Desktop Bridge or any local Figma application. If `use_figma` is not available in the current session, the agent must:
+1. Inform the user that Figma write access requires the remote MCP server
+2. Suggest installing the Figma MCP plugin (available for Claude Code and Cursor)
+3. Do not attempt alternative methods — no desktop bridge, no local API, no browser automation
+
+**Hardcoded rule:** The agent must not call `search_design_system`, `get_design_context`, `get_variable_defs`, or `use_figma` unless these tools are confirmed available in the current MCP session. Do not attempt tool discovery at runtime.
+
+### URL Access Permission
+
+Before the agent fetches any website URL for design token extraction (Source 3 in `design-tokens/token-sources.md`), it must follow this procedure:
+
+1. **Confirm the URL** — present the URL back to the user and ask: "I'll access this URL to extract design tokens (colors, typography, spacing). Do you confirm this URL is correct and accessible?"
+2. **Wait for confirmation** — do not fetch until the user explicitly confirms
+3. **If the URL requires authentication** — the agent cannot access authenticated pages. Inform the user and suggest alternatives: provide a screenshot (Source 6), export CSS manually, or provide a JSON token file (Source 7)
+4. **If the fetch fails** — report the failure, do not retry silently. Offer the same alternatives as Step 3.
+5. **Rate limit** — fetch the URL once. Do not re-fetch the same URL multiple times in a session unless the user explicitly requests it.
+
+This permission step applies every time a new URL is provided, even if the user has confirmed a different URL earlier in the session.
 
 ---
 

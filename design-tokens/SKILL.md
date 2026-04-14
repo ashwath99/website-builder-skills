@@ -1,7 +1,7 @@
 ---
 name: design-tokens
 description: Defines all design token values including colors, typography, spacing, shadows, borders, CTA styles, and brand invariants. Single source of truth for the visual identity. Use when applying design tokens, setting up brand colors, typography, or spacing for any landing page.
-version: "5.0.4"
+version: "5.0.5"
 ---
 
 # Design Guide — Token Authority
@@ -84,7 +84,83 @@ The tinted section pattern system uses matched surface/border color pairs. Each 
 
 ---
 
-## 3 — Typography Scale
+## 3 — Color Placement Map
+
+This section defines **where** each color token is applied on the page. Placements are split into two categories: hardcoded (always follow the rule) and AI-flexible (the builder selects from token options, validated by WCAG).
+
+### 3.1 — Color Application Model
+
+When a reference site is analyzed, the color system works as follows:
+- **Primary color** is the dominant brand color — it covers 50%+ of all brand-colored areas across the site (theme backgrounds, CTAs, accent elements). It is the visual identity of the site.
+- **Secondary color** is the complementary color that supports the primary — used sparingly for differentiation.
+- **Tertiary/accent** is rare — a third chromatic color if present at all.
+- **Surfaces** are the backgrounds that sections sit on. A surface is either: page-default (white/light), primary-tinted (primary at low opacity), secondary-tinted, neutral-tinted (gray), or dark (inverted).
+
+→ For how colors are extracted from reference sources: see `design-tokens/token-sources.md`
+
+### 3.2 — Hardcoded Placements
+
+These placements always map to the specified token. No AI discretion — the builder must follow these exactly.
+
+| Placement Area | Token | Rule |
+|---|---|---|
+| Primary CTA background | `color-primary` | Brand signature — always primary |
+| Primary CTA hover | `color-primary-hover` | Always |
+| Primary CTA active | `color-primary-active` | Always |
+| Primary CTA text | Auto-calculated | White (`#FFFFFF`) or dark (`color-text-primary`) — whichever passes WCAG 4.5:1 against `color-primary` |
+| Secondary CTA border | `color-primary` or `color-border-default` | Must be visually distinct from primary CTA |
+| Body text | `color-text-primary` | All paragraph text, list items |
+| Description / supporting text | `color-text-secondary` | Subtitles, metadata, card descriptions |
+| Caption / muted text | `color-text-tertiary` | Timestamps, footnotes, helper text |
+| Text on dark backgrounds | `color-text-inverse` | Any text over dark or primary-colored surfaces |
+| Page background | `color-bg-page` | `<body>` and default section background |
+| Card / component surface | `color-bg-surface` | Card backgrounds, modal backgrounds |
+| Elevated surface | `color-bg-elevated` | Dropdowns, tooltips, popovers |
+| Default borders | `color-border-default` | Card borders, input borders, dividers |
+| Subtle borders | `color-border-light` | Section separators, light dividers |
+
+### 3.3 — AI-Flexible Placements
+
+The builder selects from the listed token options based on content context. Every choice **must** pass WCAG validation (Section 3.4) before output.
+
+| Placement Area | Token Options | Guidance |
+|---|---|---|
+| Hero banner background | `color-primary` (solid), `tint-1` (subtle), dark surface, image, `color-bg-page` | Depends on hero variant and content tone |
+| Section alternate background | `tint-1`, `tint-2`, `tint-3`, `tint-4` | Alternate with `color-bg-page` for visual rhythm — do not use same tint consecutively |
+| Feature icon color | `color-primary`, `color-secondary` | Match brand emphasis; primary for key features |
+| Highlight / special text | `color-primary`, `color-secondary` | Use sparingly — only for drawing attention to key phrases |
+| Footer background | Dark surface, neutral surface, `tint-1` | Context-dependent; dark footer is common for marketing sites |
+| Sidebar background | `color-bg-surface`, `tint-1` | Subtle differentiation from main content |
+| Pricing highlight card | `color-primary` background, `tint-1` background | Recommended/featured plan gets visual emphasis |
+| Testimonial / quote section | `tint-1`, `tint-2`, `color-bg-page` | Gentle visual break; avoid heavy tints |
+| Nav active state / underline | `color-primary` | Active link indicator |
+| Tag / badge background | `color-primary` at low opacity, `tint-1` | Labels, category tags |
+| Stat / metric highlight | `color-primary`, `color-secondary` | Draw attention to key numbers |
+| Form section background | `color-bg-surface`, `tint-1`, `color-bg-page` | Visually group the form area |
+
+### 3.4 — WCAG Validation Rules
+
+Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA contrast requirements before final output.
+
+| Content Type | Minimum Contrast Ratio | Against |
+|---|---|---|
+| Normal text (< 18px regular, < 14px bold) | 4.5 : 1 | Its background color |
+| Large text (≥ 18px regular, ≥ 14px bold) | 3 : 1 | Its background color |
+| UI components (buttons, inputs, icons) | 3 : 1 | Adjacent background color |
+| Focus indicators | 3 : 1 | Surrounding background |
+| Non-text contrast (graphical objects, charts) | 3 : 1 | Adjacent colors |
+
+**Validation process for AI-flexible placements:**
+1. Choose a token from the options column
+2. Calculate contrast ratio between text/element color and its background
+3. If it passes → apply
+4. If it fails → try next token option from the list
+5. If all options fail → adjust opacity or lightness to meet ratio, flag with `/* WCAG-adjusted */`
+6. Never skip validation — every color pair in the final output must pass
+
+---
+
+## 4 — Typography Scale
 
 ### 3.1 — Font Families
 
@@ -136,9 +212,9 @@ The tinted section pattern system uses matched surface/border color pairs. Each 
 
 ---
 
-## 4 — Spacing Scale
+## 5 — Spacing Scale
 
-### 4.1 — Base Scale
+### 5.1 — Base Scale
 
 A consistent spacing scale used across all components and layouts. All spacing values are derived from a base unit.
 
@@ -153,7 +229,7 @@ A consistent spacing scale used across all components and layouts. All spacing v
 | `space-2xl` | `{PLACEHOLDER}` | Section top/bottom padding |
 | `space-3xl` | `{PLACEHOLDER}` | Maximum spacing — hero sections, major breaks |
 
-### 4.2 — Layout-Specific Spacing
+### 5.2 — Layout-Specific Spacing
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -169,7 +245,7 @@ A consistent spacing scale used across all components and layouts. All spacing v
 
 ---
 
-## 5 — Shadows & Elevation
+## 6 — Shadows & Elevation
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -180,7 +256,7 @@ A consistent spacing scale used across all components and layouts. All spacing v
 
 ---
 
-## 6 — Border Radius
+## 7 — Border Radius
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -192,7 +268,7 @@ A consistent spacing scale used across all components and layouts. All spacing v
 
 ---
 
-## 7 — CTA Styles
+## 8 — CTA Styles
 
 CTA hierarchy defines three levels. Every page must respect this visual weight order.
 
@@ -229,7 +305,7 @@ CTA hierarchy defines three levels. Every page must respect this visual weight o
 
 ---
 
-## 8 — Iconography Guidelines
+## 9 — Iconography Guidelines
 
 | Property | Value |
 |---|---|
@@ -242,7 +318,7 @@ CTA hierarchy defines three levels. Every page must respect this visual weight o
 
 ---
 
-## 9 — Form & Input Tokens
+## 10 — Form & Input Tokens
 
 Tokens for the Form component and all input fields. Applied consistently across contact, registration, newsletter, and download-gate form variants.
 
@@ -258,7 +334,7 @@ Tokens for the Form component and all input fields. Applied consistently across 
 
 ---
 
-## 10 — Image Treatment
+## 11 — Image Treatment
 
 | Property | Value |
 |---|---|
@@ -272,7 +348,7 @@ Tokens for the Form component and all input fields. Applied consistently across 
 
 ---
 
-## 11 — Token Sources
+## 12 — Token Sources
 
 Token values can be supplied from 7 different sources. The agent detects which source is available (see `pipeline-workflow` — Token Source Detection) and extracts values accordingly. All sources produce the same output: resolved values in `token-values.md` format.
 
@@ -290,7 +366,7 @@ Token values can be supplied from 7 different sources. The agent detects which s
 
 ---
 
-## 12 — Token Override Protocol
+## 13 — Token Override Protocol
 
 When `trend-adapter/SKILL.md` produces a Trend Adaptation Brief, it contains a Token Override Sheet — a set of replacement values for tokens defined in this file.
 
