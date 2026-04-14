@@ -108,10 +108,66 @@ Colors cannot be reliably classified from CSS property names alone. Instead, col
 - If a dark section background exists (footer, hero) → `tint-4`
 - Derive matching border colors per tint from visible card/component borders within those sections
 
-**Step 5 — Hero/banner image edge case:**
-- If the hero section uses a `background-image` (not a solid CSS color), the primary brand color may be hidden inside that image
-- CSS extraction alone will miss this — flag as: `/* color-primary may be embedded in hero background image — visual verification recommended */`
-- If a screenshot source is also available, cross-reference with Source 6 to catch this
+**Step 5 — Hero/banner image color extraction:**
+
+CSS extraction misses brand colors embedded in background images. This step recovers them using targeted image download + Python color analysis.
+
+**5a — Identify candidate images (filter strictly):**
+
+Only analyze images that are likely to carry the brand's primary color. Download rules:
+
+| Download | Skip |
+|---|---|
+| `background-image` on the first/hero section | `<img>` tags (content images — product shots, photos, thumbnails) |
+| `background-image` on elements with class/id containing: `hero`, `banner`, `header`, `masthead`, `cover` | Images in `<figure>`, `<picture>`, cards, galleries |
+| CSS gradient overlays on the hero section | SVG files (icons, illustrations) |
+| | Images smaller than 400×200 px (icons, badges, logos) |
+| | Images from stock photo CDNs (`unsplash`, `pexels`, `shutterstock`, `getty`) |
+| | Favicons, open graph images, `<meta>` images |
+
+**Maximum: 2 images downloaded.** If more candidates match, take only the first hero `background-image` and the first banner `background-image`. Do not crawl the full page for images.
+
+**5b — Extract dominant color via Python:**
+
+```python
+from PIL import Image
+from collections import Counter
+import io, subprocess
+
+# Download the image
+img_data = subprocess.run(['curl', '-s', img_url], capture_output=True).stdout
+img = Image.open(io.BytesIO(img_data)).convert('RGB')
+
+# Resize to speed up analysis (exact pixels don't matter, we need color distribution)
+img = img.resize((150, 150))
+
+# Get all pixels, filter out near-white and near-black
+pixels = list(img.getdata())
+chromatic = [p for p in pixels if not (
+    (p[0] > 230 and p[1] > 230 and p[2] > 230) or  # near-white
+    (p[0] < 25 and p[1] < 25 and p[2] < 25)          # near-black
+)]
+
+# Quantize to reduce noise — round each channel to nearest 16
+quantized = [((r // 16) * 16, (g // 16) * 16, (b // 16) * 16) for r, g, b in chromatic]
+
+# Most common chromatic color = likely primary brand color
+dominant = Counter(quantized).most_common(1)[0][0]
+hex_color = '#{:02x}{:02x}{:02x}'.format(*dominant)
+```
+
+**5c — Decide whether to use the result:**
+
+| Condition | Action |
+|---|---|
+| CSS already found a strong `color-primary` (used on CTAs + other elements) | Ignore the image color — CSS value is authoritative |
+| CSS found no clear `color-primary` but image yields a strong chromatic color | Use image color as `color-primary`, flag: `/* extracted from hero background image */` |
+| Image yields a color very close to an existing CSS color | Confirms the CSS extraction — no change needed |
+| Image yields only neutrals/grays or no dominant chromatic color | Skip — the image is photographic, not brand-colored |
+
+**5d — Cleanup:**
+- Delete downloaded image files immediately after extraction — do not keep them in the project folder
+- This step adds ~2 seconds to the pipeline — only run it when Step 1 found a `background-image` on a hero/banner element
 
 ---
 
