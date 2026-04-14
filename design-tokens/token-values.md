@@ -30,9 +30,19 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 | Token                  | Placeholder In                | Value           |
 | ---------------------- | ----------------------------- | --------------- |
 | `color-primary`        | `design-tokens/SKILL.md` Section 2.1 | `{PLACEHOLDER}` |
-| `color-primary-hover`  | `design-tokens/SKILL.md` Section 2.1 | `{PLACEHOLDER}` |
-| `color-primary-active` | `design-tokens/SKILL.md` Section 2.1 | `{PLACEHOLDER}` |
 | `color-secondary`      | `design-tokens/SKILL.md` Section 2.1 | `{PLACEHOLDER}` |
+
+
+---
+
+## 2b — CTA Colors
+
+
+| Token                  | Placeholder In                | Value           |
+| ---------------------- | ----------------------------- | --------------- |
+| `color-cta`            | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
+| `color-cta-hover`      | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
+| `color-cta-active`     | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
 
 
 ---
@@ -42,15 +52,15 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token                  | Placeholder In                | Value           |
 | ---------------------- | ----------------------------- | --------------- |
-| `color-text-primary`   | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-text-secondary` | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-text-tertiary`  | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-text-inverse`   | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-border-default` | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-border-light`   | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-bg-page`        | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-bg-surface`     | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
-| `color-bg-elevated`    | `design-tokens/SKILL.md` Section 2.2 | `{PLACEHOLDER}` |
+| `color-text-primary`   | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-text-secondary` | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-text-tertiary`  | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-text-inverse`   | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-border-default` | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-border-light`   | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-bg-page`        | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-bg-surface`     | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-bg-elevated`    | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
 
 
 ---
@@ -60,10 +70,10 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Token           | Placeholder In                | Value           |
 | --------------- | ----------------------------- | --------------- |
-| `color-success` | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
-| `color-warning` | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
-| `color-error`   | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
-| `color-info`    | `design-tokens/SKILL.md` Section 2.3 | `{PLACEHOLDER}` |
+| `color-success` | `design-tokens/SKILL.md` Section 2.4 | `{PLACEHOLDER}` |
+| `color-warning` | `design-tokens/SKILL.md` Section 2.4 | `{PLACEHOLDER}` |
+| `color-error`   | `design-tokens/SKILL.md` Section 2.4 | `{PLACEHOLDER}` |
+| `color-info`    | `design-tokens/SKILL.md` Section 2.4 | `{PLACEHOLDER}` |
 
 
 ---
@@ -73,10 +83,10 @@ This file fills every `{PLACEHOLDER}` in the skill file system. When running any
 
 | Tint     | Surface Color   | Border Color    | Placeholder In                |
 | -------- | --------------- | --------------- | ----------------------------- |
-| `tint-1` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.4 |
-| `tint-2` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.4 |
-| `tint-3` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.4 |
-| `tint-4` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.4 |
+| `tint-1` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.5 |
+| `tint-2` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.5 |
+| `tint-3` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.5 |
+| `tint-4` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | `design-tokens/SKILL.md` Section 2.5 |
 
 
 ---
@@ -315,7 +325,8 @@ These values are structural CSS constants defined in `design-tokens/SKILL.md` an
 | Category                                    | Count  |
 | ------------------------------------------- | ------ |
 | Brand fonts (heading, CDN URL, body, mono)  | 4      |
-| Brand colors (primary, hover, active, secondary) | 4      |
+| Brand colors (primary, secondary)                 | 2      |
+| CTA colors (cta, hover, active)                   | 3      |
 | Neutral colors                              | 9      |
 | Semantic colors                             | 4      |
 | Tinted section pairs (4 tints × 2 values)   | 8      |
@@ -332,6 +343,6 @@ These values are structural CSS constants defined in `design-tokens/SKILL.md` an
 | Form & input tokens                         | 7      |
 | Image treatment (incl. avatar, map height)  | 7      |
 | Component-level                             | 2      |
-| **Total**                                   | **97** |
+| **Total**                                   | **98** |
 
 

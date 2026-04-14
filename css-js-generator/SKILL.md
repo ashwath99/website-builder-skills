@@ -1,7 +1,7 @@
 ---
 name: css-js-generator
 description: Defines all CSS and JavaScript output rules including custom property syntax, responsive desktop-first implementation, file organization, tinted section and bento grid CSS, jQuery interaction patterns, animation standards, and code quality rules. Use when generating styles.css and script.js for any landing page.
-version: "5.0"
+version: "5.0.6"
 ---
 
 # CSS & JS Rules — Code Output Standards
@@ -58,7 +58,8 @@ All custom properties are declared in a `:root` block at the top of `styles.css`
 :root {
   /* Colors — values from design-tokens/SKILL.md */
   --{product}-color-primary: {value};
-  --{product}-color-primary-hover: {value};
+  --{product}-color-cta: {value};
+  --{product}-color-cta-hover: {value};
   --{product}-color-text-primary: {value};
   --{product}-color-text-secondary: {value};
   --{product}-color-bg-page: {value};

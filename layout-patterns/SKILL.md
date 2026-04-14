@@ -1,7 +1,7 @@
 ---
 name: layout-patterns
 description: Page layout system for all marketing website page types. Defines section layout types (split, sidebar, grid, bento, timeline, etc.), page type inference from content signals, and assembly logic for arranging sections into full pages. Use when identifying the page type from a brief, selecting layout types for sections, or assembling a complete page structure.
-version: "5.0.1"
+version: "5.0.6"
 ---
 
 # Layout Patterns — Page Layout System
@@ -90,7 +90,7 @@ Closing CTA   → tinted (tint-1 or brand background)
 
 **Tint assignment:** Tints from `design-tokens` are assigned in order. If more tinted sections exist than available tint pairs, cycle back to tint-1.
 
-→ For tint color values: see `design-tokens` Section 2.4
+→ For tint color values: see `design-tokens` Section 2.5
 → For HTML tint class naming: see `html-generator`
 
 ### 2.3 — Visual Weight Pacing

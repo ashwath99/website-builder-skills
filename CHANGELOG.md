@@ -6,6 +6,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.6] — 2026-04-14
+
+### Added
+
+- **`design-tokens/SKILL.md` — Section 2.2: CTA Colors** (new section) — Separated `color-cta`, `color-cta-hover`, and `color-cta-active` as independent tokens from `color-primary`. Many brands (e.g., ManageEngine, Zoho) use a contrasting CTA color that differs from their primary brand color.
+
+### Changed
+
+- **`design-tokens/SKILL.md` — Section 1 (Brand Invariants)** — "Brand primary color" and "CTA color" are now two distinct locked invariants.
+- **`design-tokens/SKILL.md` — Section 2.1 (Brand Colors)** — `color-primary` redefined as dominant brand theme color (50%+ of branded areas: headers, nav, section tints). Removed `color-primary-hover` and `color-primary-active` (these were CTA states, not brand states).
+- **`design-tokens/SKILL.md` — Section 3.2 (Hardcoded Placements)** — CTA button backgrounds now use `color-cta` instead of `color-primary`.
+- **`design-tokens/SKILL.md` — Section 8 (CTA Styles)** — All CTA background/hover/active states reference `color-cta-*` tokens instead of `color-primary-*`.
+- **`design-tokens/token-sources.md` — Source 3 (URL)** — Three independent extraction paths: Path A (brand primary from page-wide coverage), Path B (CTA from button elements), Path C (neutrals). After extraction, explicitly compares whether CTA = primary or distinct.
+- **`design-tokens/token-sources.md` — Section 8 (Normalization)** — Added CTA-specific mapping rules: `btn-primary` background → `color-cta` (not `color-primary`); hex/rgb on button backgrounds → `color-cta`.
+- **`design-tokens/token-sources.md` — Figma variable mapping** — Added `color/cta/primary` → `color-cta`, `color/cta/hover` → `color-cta-hover`.
+- **`design-tokens/token-values.md`** — Added Section 2b (CTA Colors) with 3 new placeholder rows. Removed old `color-primary-hover/active`. Placeholder count 97 → 98.
+- **`css-js-generator/SKILL.md`** — CSS custom property examples updated to use `color-cta` and `color-cta-hover`.
+- **`trend-adapter/SKILL.md`** — Tint section cross-reference updated (Section 2.4 → 2.5), spacing and typography refs updated.
+- **`layout-patterns/SKILL.md`** — Tint section cross-reference updated (Section 2.4 → 2.5).
+- **`master-reference/SKILL.md`** — Placeholder count updated (97 → 98).
+
+### Why
+
+CTA color conflation with brand primary caused incorrect color assignments during testing — brands with contrasting CTA colors (red CTA on a non-red-primary site) had their entire theme incorrectly skewed toward the CTA color.
+
+---
+
 ## [5.0.5] — 2026-04-14
 
 ### Added

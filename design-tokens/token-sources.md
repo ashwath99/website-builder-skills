@@ -86,20 +86,39 @@ Colors cannot be reliably classified from CSS property names alone. Instead, col
 - Group similar colors within a close perceptual range (e.g. `#E9142B` and `#EA1529`) as one color
 - Separate chromatic colors (hues with saturation) from achromatic (white, black, grays)
 
-**Step 3 — Classify by coverage rank:**
+**Step 3 — Classify by two independent paths:**
 
-| Rank | Classification | Token Assignment |
+Brand primary and CTA color are extracted **separately**. They may or may not be the same color.
+
+**Path A — Brand colors (from page-wide coverage):**
+
+| Method | Classification | Token |
 |---|---|---|
-| Highest-coverage chromatic color (typically 50%+ of brand-colored areas) | Primary brand color | `color-primary` |
-| Derive from primary: darken ~10% | Primary hover | `color-primary-hover` |
-| Derive from primary: darken ~15% | Primary active | `color-primary-active` |
-| Second-highest chromatic color (if distinct from primary) | Secondary brand color | `color-secondary` |
+| Highest-coverage chromatic color across all non-button elements (headers, nav, section accents, tinted backgrounds, icons) — typically 50%+ of branded areas | Primary brand color | `color-primary` |
+| Second-highest chromatic color (if visually distinct) | Secondary brand color | `color-secondary` |
+
+**Path B — CTA color (from button elements only):**
+
+| Method | Classification | Token |
+|---|---|---|
+| `background-color` on primary action buttons (`.btn-primary`, `[class*="cta"]`, `button[type="submit"]`, the most prominent button) | CTA action color | `color-cta` |
+| Derive from CTA: darken ~10% | CTA hover | `color-cta-hover` |
+| Derive from CTA: darken ~15% | CTA active | `color-cta-active` |
+
+**Path C — Neutral & text colors (from context):**
+
+| Method | Classification | Token |
+|---|---|---|
 | Light achromatic covering the largest page area | Page background | `color-bg-page` |
 | Slightly different light neutral on cards/components | Surface background | `color-bg-surface` |
 | Darkest color used on body/paragraph text | Primary text | `color-text-primary` |
 | Medium-contrast color used on descriptions/metadata | Secondary text | `color-text-secondary` |
 | Lightest/muted text color (captions, hints) | Tertiary text | `color-text-tertiary` |
 | Light color used on text over dark/primary backgrounds | Inverse text | `color-text-inverse` |
+
+**After extraction, compare:**
+- If `color-cta` = `color-primary` (same or very similar) → note: "CTA uses brand primary"
+- If `color-cta` ≠ `color-primary` → note: "CTA uses a distinct action color" — both tokens get their own values
 
 **Step 4 — Derive tinted section colors from primary/secondary:**
 - Identify section backgrounds that use a tinted/translucent version of the primary color → `tint-1`
@@ -160,9 +179,10 @@ hex_color = '#{:02x}{:02x}{:02x}'.format(*dominant)
 
 | Condition | Action |
 |---|---|
-| CSS already found a strong `color-primary` (used on CTAs + other elements) | Ignore the image color — CSS value is authoritative |
-| CSS found no clear `color-primary` but image yields a strong chromatic color | Use image color as `color-primary`, flag: `/* extracted from hero background image */` |
-| Image yields a color very close to an existing CSS color | Confirms the CSS extraction — no change needed |
+| Coverage-based extraction already found a strong `color-primary` (dominant across headers, nav, sections) | Ignore the image color — coverage value is authoritative |
+| Coverage found no clear `color-primary` but image yields a strong chromatic color | Use image color as `color-primary`, flag: `/* extracted from hero background image */` |
+| Image yields a color matching the CTA color but NOT covering the rest of the site | This confirms CTA ≠ primary — the image just shows CTA color in context. Do not use as `color-primary`. |
+| Image yields a color very close to an existing CSS-extracted color | Confirms the CSS extraction — no change needed |
 | Image yields only neutrals/grays or no dominant chromatic color | Skip — the image is photographic, not brand-colored |
 
 **5d — Cleanup:**
@@ -241,7 +261,8 @@ Merge Track A (color tokens) and Track B (non-color tokens) into a single resolv
 | Figma Variable Path | Canonical Token |
 |---|---|
 | `color/brand/primary` | `color-primary` |
-| `color/brand/primary-hover` | `color-primary-hover` |
+| `color/cta/primary` or `color/action/primary` | `color-cta` |
+| `color/cta/hover` or `color/action/hover` | `color-cta-hover` |
 | `color/text/primary` | `color-text-primary` |
 | `color/text/secondary` | `color-text-secondary` |
 | `color/bg/page` | `color-bg-page` |
@@ -309,13 +330,26 @@ Merge Track A (color tokens) and Track B (non-color tokens) into a single resolv
 - Which achromatic tones form the page/section backgrounds?
 - Which dark tones are used for text?
 
-**Step 3 — Classify by coverage rank:**
+**Step 3 — Classify using two independent paths (same as Source 3):**
 
-| Rank | Classification | Token Assignment |
+**Path A — Brand colors (from page-wide visual coverage):**
+
+| Method | Classification | Token |
 |---|---|---|
-| Highest-coverage chromatic color (across backgrounds, CTAs, accent areas) | Primary brand color | `color-primary` |
-| Derive from primary: estimate a darker shade | Primary hover | `color-primary-hover` |
+| Highest-coverage chromatic color across non-button areas (headers, nav, section tints, accents) | Primary brand color | `color-primary` |
 | Second chromatic color (if visibly distinct) | Secondary brand color | `color-secondary` |
+
+**Path B — CTA color (from visible buttons):**
+
+| Method | Classification | Token |
+|---|---|---|
+| Color used on the most prominent action button(s) | CTA action color | `color-cta` |
+| Estimate darker shade of CTA | CTA hover | `color-cta-hover` |
+
+**Path C — Neutral & text colors:**
+
+| Method | Classification | Token |
+|---|---|---|
 | Dominant light area | Page background | `color-bg-page` |
 | Slightly different light on cards/components | Surface background | `color-bg-surface` |
 | Darkest text tone | Primary text | `color-text-primary` |
@@ -428,9 +462,12 @@ Match source names to canonical tokens using keyword presence:
 
 | If source name contains... | Map to canonical token |
 |---|---|
-| `primary` + color context | `color-primary` |
-| `primary-hover` or `primary hover` | `color-primary-hover` |
+| `primary` + color context (NOT button/CTA context) | `color-primary` |
 | `secondary` + color context | `color-secondary` |
+| `cta` or `action` + color context | `color-cta` |
+| `cta-hover` or `action-hover` | `color-cta-hover` |
+| `cta-active` or `action-active` | `color-cta-active` |
+| `btn-primary` or `button-primary` + background | `color-cta` (not `color-primary`) |
 | `text-primary` or `text/primary` | `color-text-primary` |
 | `text-secondary` or `text/secondary` | `color-text-secondary` |
 | `text-tertiary` or `muted` | `color-text-tertiary` |
@@ -480,7 +517,7 @@ When keyword matching is inconclusive, use the value type and context:
 
 | Value characteristics | Likely token |
 |---|---|
-| Hex/rgb color used as button background | `color-primary` |
+| Hex/rgb color used as button background | `color-cta` (not `color-primary` — buttons indicate CTA, not brand theme) |
 | Hex/rgb color used as page/body background | `color-bg-page` |
 | Hex/rgb color used as card background | `color-bg-surface` |
 | Dark hex used as paragraph text color | `color-text-primary` |

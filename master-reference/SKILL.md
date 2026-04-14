@@ -1,7 +1,7 @@
 ---
 name: master-reference
 description: Central reference for the website builder skill architecture. Contains file inventory, cross-skill ownership table, usage matrix by mode, Figma MCP tool mapping, dependency map, and design system standards. Use when checking which skills are needed for a mode, verifying ownership of a rule, or looking up Figma MCP tool usage.
-version: "5.0.4"
+version: "5.0.6"
 ---
 
 # UX Skill File Architecture — Master Reference
@@ -205,7 +205,7 @@ Each instruction, token definition, or rule exists in exactly ONE skill. Other s
 | CTA styles (primary, secondary, tertiary) | `design-tokens` | `component-library`, `html-generator`, `css-js-generator` |
 | Brand invariants (locked values) | `design-tokens` | `trend-adapter`, `execution-prompts` |
 | Token override protocol | `design-tokens` | `trend-adapter` |
-| Production token values (97 placeholders) | `design-tokens/token-values.md` | `design-tokens`, all downstream skills |
+| Production token values (98 placeholders) | `design-tokens/token-values.md` | `design-tokens`, all downstream skills |
 | Token ingestion protocols (7 sources) | `design-tokens/token-sources.md` | `pipeline-workflow`, `design-tokens` |
 | Token source detection logic | `pipeline-workflow` | All modes |
 | Iconography guidelines | `design-tokens` | `component-library` |

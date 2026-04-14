@@ -1,7 +1,7 @@
 ---
 name: design-tokens
 description: Defines all design token values including colors, typography, spacing, shadows, borders, CTA styles, and brand invariants. Single source of truth for the visual identity. Use when applying design tokens, setting up brand colors, typography, or spacing for any landing page.
-version: "5.0.5"
+version: "5.0.6"
 ---
 
 # Design Guide — Token Authority
@@ -23,7 +23,8 @@ These values are locked. No trend adaptation, variation, or override may change 
 
 | Invariant | Value | Notes |
 |---|---|---|
-| Primary CTA color | `{PLACEHOLDER}` | Brand primary — used for all primary action buttons |
+| Brand primary color | `{PLACEHOLDER}` | Dominant brand theme color — the visual identity of the site |
+| CTA color | `{PLACEHOLDER}` | Action button color — may or may not equal brand primary |
 | Brand font (headings) | `{PLACEHOLDER}` | Heading font family |
 | Body font | `{PLACEHOLDER}` | System font stack or brand-specified body font |
 | CTA hierarchy | Primary (filled) → Secondary (outlined/ghost) → Tertiary (text link) | Order and visual weight must be maintained |
@@ -38,12 +39,20 @@ These values are locked. No trend adaptation, variation, or override may change 
 
 | Token Name | Value | Usage |
 |---|---|---|
-| `color-primary` | `{PLACEHOLDER}` | Primary CTA backgrounds, key accent elements |
-| `color-primary-hover` | `{PLACEHOLDER}` | Primary CTA hover state |
-| `color-primary-active` | `{PLACEHOLDER}` | Primary CTA active/pressed state |
-| `color-secondary` | `{PLACEHOLDER}` | Secondary brand color if applicable |
+| `color-primary` | `{PLACEHOLDER}` | Dominant brand theme color — headers, nav accents, section tints, feature highlights. This is the site's visual identity (50%+ of branded areas). |
+| `color-secondary` | `{PLACEHOLDER}` | Complementary brand color — supports primary, used sparingly |
 
-### 2.2 — Neutral Colors
+### 2.2 — CTA Colors
+
+CTA color is separated from brand primary because many brands use a contrasting action color (e.g. red CTAs on a blue-themed site). When CTA and primary happen to be the same color, both tokens hold the same value.
+
+| Token Name | Value | Usage |
+|---|---|---|
+| `color-cta` | `{PLACEHOLDER}` | Primary action button background. May equal `color-primary` or be a distinct contrasting color. |
+| `color-cta-hover` | `{PLACEHOLDER}` | Primary CTA hover state (typically `color-cta` darkened ~10%) |
+| `color-cta-active` | `{PLACEHOLDER}` | Primary CTA active/pressed state (typically `color-cta` darkened ~15%) |
+
+### 2.3 — Neutral Colors
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -57,7 +66,7 @@ These values are locked. No trend adaptation, variation, or override may change 
 | `color-bg-surface` | `{PLACEHOLDER}` | Card and component backgrounds |
 | `color-bg-elevated` | `{PLACEHOLDER}` | Elevated surfaces (modals, dropdowns) |
 
-### 2.3 — Semantic Colors
+### 2.4 — Semantic Colors
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -66,7 +75,7 @@ These values are locked. No trend adaptation, variation, or override may change 
 | `color-error` | `{PLACEHOLDER}` | Error states, destructive actions |
 | `color-info` | `{PLACEHOLDER}` | Informational highlights |
 
-### 2.4 — Tinted Section Colors
+### 2.5 — Tinted Section Colors
 
 The tinted section pattern system uses matched surface/border color pairs. Each tint is used as a section background to create visual rhythm down the page.
 
@@ -104,11 +113,11 @@ These placements always map to the specified token. No AI discretion — the bui
 
 | Placement Area | Token | Rule |
 |---|---|---|
-| Primary CTA background | `color-primary` | Brand signature — always primary |
-| Primary CTA hover | `color-primary-hover` | Always |
-| Primary CTA active | `color-primary-active` | Always |
-| Primary CTA text | Auto-calculated | White (`#FFFFFF`) or dark (`color-text-primary`) — whichever passes WCAG 4.5:1 against `color-primary` |
-| Secondary CTA border | `color-primary` or `color-border-default` | Must be visually distinct from primary CTA |
+| Primary CTA background | `color-cta` | Action color — may differ from brand primary |
+| Primary CTA hover | `color-cta-hover` | Always |
+| Primary CTA active | `color-cta-active` | Always |
+| Primary CTA text | Auto-calculated | White (`#FFFFFF`) or dark (`color-text-primary`) — whichever passes WCAG 4.5:1 against `color-cta` |
+| Secondary CTA border | `color-cta` or `color-border-default` | Must be visually distinct from primary CTA |
 | Body text | `color-text-primary` | All paragraph text, list items |
 | Description / supporting text | `color-text-secondary` | Subtitles, metadata, card descriptions |
 | Caption / muted text | `color-text-tertiary` | Timestamps, footnotes, helper text |
@@ -275,13 +284,13 @@ CTA hierarchy defines three levels. Every page must respect this visual weight o
 ### Primary CTA
 | Property | Value |
 |---|---|
-| Background | `color-primary` |
+| Background | `color-cta` |
 | Text color | `{PLACEHOLDER}` |
 | Font weight | `font-weight-semibold` |
 | Border radius | `radius-sm` |
 | Padding | `{PLACEHOLDER}` |
-| Hover background | `color-primary-hover` |
-| Active background | `color-primary-active` |
+| Hover background | `color-cta-hover` |
+| Active background | `color-cta-active` |
 
 ### Secondary CTA
 | Property | Value |

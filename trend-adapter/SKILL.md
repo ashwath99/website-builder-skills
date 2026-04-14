@@ -1,7 +1,7 @@
 ---
 name: trend-adapter
 description: Ingests external design trends and translates them into brand-safe token overrides and layout modifications. Defines 7 trend dimensions, named profiles, and competitor scan process. Use when adapting landing page designs to current visual trends, applying trend profiles, or doing competitive design analysis.
-version: "5.0.1"
+version: "5.0.6"
 ---
 
 # Trend Adaptation — Token Overrides & Layout Modifications
@@ -80,7 +80,7 @@ Warmth or coolness of surface colors and section backgrounds.
 
 **Invariant check:** The brand primary CTA color remains unchanged in all temperature modes.
 
-→ Tint pair values being modified are defined in `design-tokens/SKILL.md` Section 2.4
+→ Tint pair values being modified are defined in `design-tokens/SKILL.md` Section 2.5
 
 ### 2.4 — Visual Weight Distribution
 
