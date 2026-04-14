@@ -10,6 +10,31 @@ Read this file first in every session.
 
 ---
 
+## Session Start
+
+When the user adds the skill files to a project and instructs the agent to read them, the agent must:
+
+1. **Read all skill files** in the order defined by the Skill File Dependency Map (see below) — starting with `pipeline-workflow`, then the Design Decision Layer, then whichever execution layer is relevant.
+
+2. **Confirm readiness** — once all files are read, respond: "Ready. Which mode would you like to proceed with?" and present the three options:
+   - **Mode A** — Brief → Figma
+   - **Mode B** — Figma → Code
+   - **Mode C** — Brief → Code
+
+3. **Ask about token source** — in the same readiness message, if the user has not already provided a token source (no `.md` token file, no `.json`, no Figma link, no URL, no screenshot attached), ask: "How would you like to supply design tokens?" and list the available sources:
+   - Product token file (`.md`)
+   - Website URL (for CSS extraction)
+   - Figma design system or frame
+   - Screenshot / image
+   - JSON token file
+   - Manual fill (edit `token-values.md` directly)
+
+   If the user has already attached or referenced a token source in their initial message, skip this question — acknowledge the detected source instead.
+
+4. **Wait for user response** before proceeding with any pipeline step.
+
+---
+
 ## Pipeline Overview
 
 This skill file system enables AI agents to convert marketing content briefs into Figma design frames and/or production-ready landing page code. The pipeline is modular — agents read only the files needed for the active execution mode.

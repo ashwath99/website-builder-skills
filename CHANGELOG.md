@@ -6,6 +6,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.5] — 2026-04-14
+
+### Added
+
+- **`design-tokens/SKILL.md` — Section 3: Color Placement Map** (new section) — Defines where each color token is applied on the page:
+  - **Section 3.1 — Color Application Model** — Primary color = 50%+ dominant theme (backgrounds, CTAs, accents); secondary = complement; surfaces tied to color roles (primary-tinted, secondary-tinted, neutral, dark).
+  - **Section 3.2 — Hardcoded Placements** — 14 locked rules (CTA backgrounds, text colors, page/card backgrounds, borders) — no AI discretion.
+  - **Section 3.3 — AI-Flexible Placements** — 12 context-dependent slots (hero bg, section tints, feature icons, footer, pricing highlights) where the builder selects from token options.
+  - **Section 3.4 — WCAG Validation Rules** — Contrast ratio requirements (4.5:1 normal text, 3:1 large text/UI) with validation process for every AI-flexible placement.
+  - All subsequent sections renumbered 4–13; all cross-references updated in `token-values.md`, `trend-adapter`, `variation-explorer`.
+
+- **`pipeline-workflow/SKILL.md` — Tool Permissions & Restrictions** (new section):
+  - **use_figma tool** — Hardcoded to remote MCP server only; agent must never search for or use Desktop Bridge.
+  - **URL Access Permission** — Agent must confirm URL with user before fetching for token extraction; handles auth failures and rate limits.
+
+- **`pipeline-workflow/SKILL.md` — Session Start** (new section) — Defines agent behavior when user adds skill files: read all skills → confirm readiness → ask which mode → ask about token source (if not already provided).
+
+### Changed
+
+- **`design-tokens/token-sources.md` — Source 3 (URL) rewritten** — Replaced CSS property-name matching with coverage-based color extraction: collect all colors → calculate % visual weight → classify as primary (50%+), secondary, bg, text. Non-color tokens (typography, spacing, shadows) keep the existing CSS property mapping. Added hero background image edge case flag.
+- **`design-tokens/token-sources.md` — Source 6 (Screenshot) rewritten** — Same coverage-based visual classification. Screenshots can catch primary brand colors hidden in hero background images that CSS scraping misses.
+- **`design-tokens/token-values.md`** — All section references updated to match new numbering (Sections 4–11). Component-Level Placeholders renumbered to Section 14.
+
+---
+
 ## [5.0.4] — 2026-04-09
 
 ### Added
