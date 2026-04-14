@@ -50,6 +50,12 @@ Extracted values must be mapped to the canonical token names defined in `design-
 
 **Permission requirement:** Before fetching any website URL, the agent must confirm with the user that the URL is accessible and that they have permission to use it as a design reference. See `pipeline-workflow/SKILL.md` — URL Access Permission section.
 
+**Fetch method (hardcoded):** Use the `WebFetch` tool to retrieve the page HTML and linked stylesheets. This is the only permitted method for URL-based extraction.
+- Do **not** use `curl`, `wget`, Python `requests`, or any shell-based HTTP fetch
+- Do **not** attempt browser automation or headless Chrome
+- If `WebFetch` fails or is unavailable, do **not** retry with alternative tools — inform the user and suggest providing a screenshot (Source 6) or exporting CSS/JSON manually (Source 7) instead
+- Fetch the URL **once only** — do not re-fetch or crawl linked pages unless the user explicitly asks
+
 **Extraction is split into two tracks:** color extraction (coverage-based classification) and non-color extraction (CSS property mapping). These run in parallel.
 
 ---

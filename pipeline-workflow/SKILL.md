@@ -57,14 +57,24 @@ All Figma interactions use the **remote MCP server** (`mcp.figma.com/mcp`) by de
 
 ## Tool Permissions & Restrictions
 
-### use_figma Tool
+### Figma Tools (All)
 
-`use_figma` is **only** available via the remote MCP server (`mcp.figma.com/mcp`). The agent must never search for, launch, or attempt to connect to the Figma Desktop Bridge or any local Figma application. If `use_figma` is not available in the current session, the agent must:
-1. Inform the user that Figma write access requires the remote MCP server
-2. Suggest installing the Figma MCP plugin (available for Claude Code and Cursor)
-3. Do not attempt alternative methods — no desktop bridge, no local API, no browser automation
+**All** Figma interactions use the remote MCP plugin (`mcp.figma.com/mcp`) exclusively. This applies to every Figma tool — not just `use_figma`:
 
-**Hardcoded rule:** The agent must not call `search_design_system`, `get_design_context`, `get_variable_defs`, or `use_figma` unless these tools are confirmed available in the current MCP session. Do not attempt tool discovery at runtime.
+| Tool | Source | Never use alternative |
+|---|---|---|
+| `use_figma` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+| `get_design_context` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+| `get_variable_defs` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+| `search_design_system` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+| `get_screenshot` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+| `generate_figma_design` | Remote MCP plugin only | No desktop bridge, no local Figma API |
+
+**Hardcoded rules:**
+1. The agent must **never** search for, launch, or attempt to connect to the Figma Desktop Bridge or any local Figma application
+2. The agent must **never** attempt tool discovery at runtime — if a Figma tool is not already available in the current MCP session, it is not available
+3. If Figma tools are not available, inform the user: "Figma access requires the Figma MCP plugin (available for Claude Code and Cursor). Install it and reconnect."
+4. Do not attempt alternative methods — no desktop bridge, no local API, no browser automation, no Figma REST API calls via curl/fetch
 
 ### URL Access Permission
 
