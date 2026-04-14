@@ -52,6 +52,8 @@ Extracted values must be mapped to the canonical token names defined in `design-
 
 **Fetch method (hardcoded):** Use `curl` via Bash to retrieve raw HTML and CSS files. This is the only permitted method — raw content is required for precise token extraction.
 
+**Known limitation:** Some domains (e.g., manageengine.com) block `curl` requests via WAF, bot detection, or Cloudflare. This is expected — not all sites can be scraped. When this happens, follow the curl failure protocol below and ask the user for an alternative source.
+
 1. `curl -s <URL>` — fetch the page HTML
 2. Parse `<link rel="stylesheet" href="...">` tags to find CSS file URLs
 3. `curl -s <CSS_URL>` — fetch each linked stylesheet
@@ -60,8 +62,13 @@ Extracted values must be mapped to the canonical token names defined in `design-
 **Rules:**
 - Do **not** use `WebFetch` — it processes content through an AI model and loses raw CSS precision
 - Do **not** use Python `requests`, `wget`, or browser automation
-- Do **not** attempt alternative tools if `curl` fails — inform the user and suggest: screenshot (Source 6), manual CSS export, or JSON token file (Source 7)
-- Fetch the page **once only** — do not re-fetch or crawl linked pages unless the user explicitly asks
+- **Curl failure protocol (STRICT):** If `curl` fails on the given URL (403, 404, timeout, empty response, WAF block, or any non-200 status):
+  1. **Stop immediately** — do not retry the same URL
+  2. **Do not navigate to sub-pages** — never try `/about`, `/features`, `/pricing`, or any other path on the same domain
+  3. **Do not try alternative tools** — no WebFetch, no Python, no wget
+  4. **Ask the user** to choose an alternative token source: screenshot (Source 6), manual CSS file export, or JSON token file (Source 7)
+  5. Present the failure clearly: "curl could not access {URL}. This domain may block automated requests. Please provide tokens via: (a) screenshot of the page, (b) exported CSS file, or (c) token file."
+- Fetch the **exact URL provided only** — do not crawl linked pages, sub-pages, or sitemaps. If the user shares `example.com/product`, fetch only that page and its linked stylesheets. Never traverse to `example.com/pricing` or any other path.
 - Maximum 5 stylesheet fetches per page (main CSS + up to 4 linked sheets)
 
 **Extraction is split into two tracks:** color extraction (coverage-based classification) and non-color extraction (CSS property mapping). These run in parallel.

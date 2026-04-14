@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.7] — 2026-04-14
+
+### Added
+
+- **`figma-frame-builder/SKILL.md` — Collapsed Frame Prevention** — Min-height requirements for all section frames (Hero: 500px, Feature Grid: 300px, CTA: 250px, etc.) and component frames (Feature Card: 150px, Pricing Card: 200px, etc.). Root cause fix: text layers must use `textAutoResize: "HEIGHT"` and image placeholders must have explicit height.
+- **`figma-frame-builder/SKILL.md` — Collapsed Frame Detection in Verification Loop** — Mandatory check in every self-healing iteration. If any section appears collapsed in the screenshot, the agent must inspect child layers, fix sizing, and re-verify. Loop cannot pass with collapsed frames.
+
+### Changed
+
+- **`figma-frame-builder/SKILL.md` — Design System Search Restriction** — Agent must not search Figma for design token values (colors, fonts, spacing). Tokens are already collected from the token source at session start. `search_design_system` limited to structural components only (buttons, cards, nav), max 3 calls per session.
+- **`figma-frame-builder/SKILL.md` — Button token reference** — Updated from `color-primary` to `color-cta` (aligned with v5.0.6 CTA separation).
+- **`design-tokens/token-sources.md` — Curl Failure Protocol (STRICT)** — On any curl failure: stop immediately, never traverse to sub-pages on the same domain, never try alternative tools. Ask user to switch to screenshot/CSS export/token file. Known limitation documented: some domains (e.g., manageengine.com) block curl via WAF.
+- **`design-tokens/token-sources.md` — Sub-page traversal restriction** — Explicitly forbidden: agent must fetch only the exact URL provided, never crawl to `/about`, `/features`, `/pricing` or any other path.
+
+---
+
 ## [5.0.6] — 2026-04-14
 
 ### Added

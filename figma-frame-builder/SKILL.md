@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.0.1"
+version: "5.0.7"
 ---
 
 # Figma Capture — Frame Generation
@@ -102,11 +102,24 @@ Each page section is a child frame within the top-level frame.
 |---|---|
 | Frame name | `Section: {Section Type}` (e.g., `Section: Hero`, `Section: Feature Grid`) |
 | Width | Fill parent (100% of top-level frame) |
-| Height | Hug contents |
+| Height | Hug contents (with min-height — see below) |
 | Layout mode | Vertical auto-layout |
 | Padding top/bottom | `section-padding-y` from `design-tokens` |
 | Padding left/right | Calculated to center content at `content-max-width` |
 | Fill | Based on tinted section alternation rules from `layout-patterns` |
+
+**Collapsed Frame Prevention:** "Hug contents" alone can produce visually collapsed sections when child frames don't push enough height. Every section frame must have a `min-height` set:
+
+| Section Type | Min-Height |
+|---|---|
+| Hero | `500px` |
+| Feature Grid / Feature Row | `300px` |
+| Testimonial / Logo Bar / Metrics Bar | `200px` |
+| CTA / Pricing | `250px` |
+| FAQ / Accordion | `200px` |
+| All other sections | `200px` |
+
+After creating a section, the agent must verify the rendered height exceeds min-height. If it doesn't, the section is collapsed and needs fixing (see Section 6, Step 6).
 
 ### 3.3 — Component Frames
 
@@ -116,9 +129,21 @@ Individual components within a section.
 |---|---|
 | Frame name | `{Component Type}: {Content Label}` (e.g., `Feature Card: Network Monitoring`) |
 | Width | Based on grid column span |
-| Height | Hug contents |
+| Height | Hug contents (with min-height — see below) |
 | Layout mode | Vertical or horizontal auto-layout (based on component spec) |
 | Padding | `card-padding` from `design-tokens` (for card-type components) |
+
+**Collapsed Frame Prevention:** Card and component frames also collapse when inner text or image layers don't have explicit sizing. Every component frame must have a `min-height` set:
+
+| Component Type | Min-Height |
+|---|---|
+| Feature Card | `150px` |
+| Testimonial Card | `120px` |
+| Pricing Card | `200px` |
+| Tab Panel content area | `200px` |
+| All other card/component frames | `100px` |
+
+**Root cause fix:** When populating content inside a component frame, ensure every text layer has `textAutoResize: "HEIGHT"` (width fixed, height grows with content) and every image placeholder has an explicit height set. These two properties are the most common cause of collapsed frames.
 
 ---
 
@@ -199,7 +224,7 @@ All visual properties are applied using values from `design-tokens`:
 |---|---|
 | Text colors | `color-text-primary`, `color-text-secondary`, etc. |
 | Background fills | `color-bg-page`, tint surface colors |
-| Button colors | `color-primary`, CTA style tokens |
+| Button colors | `color-cta`, `color-cta-hover`, `color-cta-active` |
 | Spacing | `section-padding-y`, `space-*` scale |
 | Typography | `font-heading`, `font-body`, size/weight/line-height tokens |
 | Shadows | `shadow-sm`, `shadow-md`, etc. |
@@ -209,16 +234,22 @@ If a Trend Adaptation Brief is active, apply the token overrides from the trend 
 
 ### 5.4 — Design System Reuse
 
-Before creating any element, the agent must check for existing design system assets:
+Before creating any element, the agent should check for existing design system components — but only for **structural components** (buttons, cards, nav bars), not for token values.
 
 ```
 1. Call search_design_system with the component type (e.g., "button", "card")
+   — Limit to ONE search call per component type, max 3 calls total per session
 2. If a matching library component exists → use it via use_figma (instantiate)
-3. If variables exist for the token → bind to the variable, don't hardcode values
-4. Only create from scratch when no library match exists
+3. Only create from scratch when no library match exists
 ```
 
-This is a behavioral change from v3.0 — `use_figma` encourages reuse by default, but the agent must explicitly search first for existing design system components.
+**Restriction: Do NOT search Figma for design token values.** The agent already has all token values collected from `design-tokens/token-values.md` (via the token source selected at session start). Searching Figma for colors, fonts, spacing, or other token values wastes time and risks conflicting with the already-collected tokens. Apply tokens directly from the collected values — never from Figma variable lookups during frame generation.
+
+| Allowed | Not Allowed |
+|---|---|
+| `search_design_system("button")` — reuse a button component | `search_design_system("colors")` — tokens already collected |
+| `search_design_system("card")` — reuse a card component | `search_design_system("typography")` — tokens already collected |
+| `search_design_system("navigation")` — reuse a nav component | `get_variable_defs` for token values — tokens already collected |
 
 ---
 
@@ -231,12 +262,14 @@ Confirm /figma-use skill is available
 ```
 If either is missing, stop and instruct the user to set up the Figma MCP plugin.
 
-### Step 2: Search for Existing Components
+### Step 2: Search for Existing Components (Structural Only)
 ```
-Call search_design_system → check if design system components exist
-that match the required component types (buttons, cards, etc.)
+Call search_design_system → check for reusable structural components
+(buttons, cards, nav bars) — max 3 search calls total
 ```
 Catalog available components for reuse. Note any gaps that require building from scratch.
+
+**Do NOT search for token values** (colors, fonts, spacing). All tokens are already collected from the token source selected at session start. Apply them directly.
 
 ### Step 3: Create Top-Level Frame
 ```
@@ -272,12 +305,37 @@ LOOP (max 3 iterations):
      - Text content is present and complete?
      - Component spacing looks correct?
      - No broken layouts or overlapping elements?
+     - **Collapsed frame check** (CRITICAL — see below)
   3. If mismatches found:
      - Log each mismatch with description
      - Fix via use_figma (adjust spacing, reorder, fix text, etc.)
      - Continue to next iteration
   4. If all checks pass → exit loop
 ```
+
+**Collapsed Frame Detection (mandatory in every iteration):**
+
+A "collapsed frame" is a section or component that renders with near-zero visible height despite having content inside. This is the most common visual defect and must be checked every iteration.
+
+Detection method:
+1. In the screenshot, check each section — does it occupy visible vertical space proportional to its content?
+2. Any section that appears as a thin strip, blank band, or is visually absent is collapsed
+3. Any card/component within a section that shows only a sliver or no visible content is collapsed
+
+Fix procedure for collapsed sections:
+```
+1. Read the collapsed frame via get_design_context → check actual height
+2. If height < min-height from Section 3.2/3.3 → collapsed confirmed
+3. Check child layers:
+   a. Text layers missing textAutoResize: "HEIGHT" → fix
+   b. Image placeholders missing explicit height → set height
+   c. Inner frames set to "Hug contents" with no min-height → set min-height
+   d. Auto-layout spacing set to 0 or negative → fix to design token spacing
+4. After fixing children, if section still below min-height → set explicit min-height
+5. Re-screenshot to verify fix
+```
+
+**Rule:** Never mark the verification loop as passed if any section or card appears collapsed in the screenshot. This check takes priority over all other checks.
 
 **Exit conditions:**
 - All visual checks pass → proceed to Step 7
