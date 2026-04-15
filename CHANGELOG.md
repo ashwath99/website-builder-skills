@@ -6,6 +6,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.0.8] — 2026-04-15
+
+### Added
+
+- **`figma-frame-builder/SKILL.md` — Section 3: Figma MCP Runtime Rules** (new section, P0) — Addresses the #1 time sink (40% of execution time lost to context resets). Documents:
+  - **Section 3.1 — Context Reset Behavior** — Every `use_figma` call runs in fresh plugin context. `figma.currentPage` resets, `getPluginData()` unsupported, `console.log()` not returned.
+  - **Section 3.2 — Node ID Persistence** — Mandatory return format for all created/mutated node IDs. Only reliable way to reference nodes across calls.
+  - **Section 3.3 — Frame-Finder Preamble** — Standard code snippet to paste at top of every call after creation: navigate page + find main frame by stored ID.
+  - **Section 3.4 — Batching Strategy** — How to split 8–12 section pages across 4–6 `use_figma` calls. Estimated call budgets per section count.
+  - **Section 3.5 — Plugin API Gotchas Quick Reference** — Colors (0–1 range, no `a` field), layout sizing order, text font loading, positioning rules, variable scopes, error handling. All from official Figma docs.
+  - All subsequent sections renumbered 4–10.
+- **`figma-frame-builder/figma-code-patterns.md`** (new file) — Production-ready Plugin API code snippets for: frame-finder preamble, top-level frame creation, section frames, text nodes, feature cards, grid containers, CTA buttons, font availability check, component instantiation, collapsed frame diagnosis. Includes correct operation order reference.
+- **`design-tokens/token-sources.md` — Section 9: Font Availability Check** (new section) — Post-extraction font verification before frame generation. Fallback chain: same family different style → design system fallback mode → visually similar Google Font → system stack. Mandatory user report before proceeding.
+
+### Changed
+
+- **`figma-frame-builder/SKILL.md` — Collapsed Frame Prevention** — Added specific collapse patterns table with causes and fixes (from production testing). Added correct operation order for create → resize → layout → appendChild → FILL sizing.
+
+### Why
+
+Mode A execution rated 6.5/10 in testing. Context reset between `use_figma` calls cost ~40% of build time. Builder had to discover Plugin API patterns (nodeId persistence, page context loading, font resolution) by trial and error. These are now documented from Figma's official MCP guide + production testing experience.
+
+---
+
 ## [5.0.7] — 2026-04-14
 
 ### Added

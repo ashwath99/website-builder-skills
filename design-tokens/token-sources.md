@@ -546,7 +546,58 @@ If a source value cannot be confidently mapped to a canonical token after Steps 
 
 ---
 
-## 9 — Gap Handling
+## 9 — Font Availability Check (Post-Extraction)
+
+After extracting font tokens from any source, the agent must verify that the fonts are actually available in the target environment before proceeding to frame generation or code output.
+
+### Why This Matters
+
+Many brands use proprietary fonts (e.g., Zoho Puvi, ManageEngine's custom typefaces) that are:
+- Not available in Figma's cloud font library
+- Not available on Google Fonts or public CDNs
+- Only accessible through internal font servers or local installs
+
+If the agent proceeds with an unavailable font, Figma frame generation will fail at `loadFontAsync()` and code output will produce invisible text.
+
+### Check Procedure
+
+**Step 1 — Verify availability (Figma Mode A only):**
+
+Before building any frames, run the font availability check snippet from `figma-frame-builder/figma-code-patterns.md` Section 8. This calls `figma.listAvailableFontsAsync()` and checks each extracted font.
+
+**Step 2 — Handle unavailable fonts:**
+
+If a font is not available, follow this fallback chain in order:
+
+| Priority | Fallback Action | Example |
+|---|---|---|
+| 1. Same family, different style | Check if the family exists with any style — the style name may differ (e.g., "Regular" vs "Normal") | Extracted "ZohoPuvi SemiBold" → check for "ZohoPuvi" with any style |
+| 2. Design system fallback mode | If extracting from Figma variables, check if the variable collection has a fallback mode that resolves to a different font | `Typeface` variable → Mode: "Fallback" → resolves to "Lato" |
+| 3. Visually similar Google Font | Match the extracted font's characteristics (serif/sans-serif, weight, x-height) to the closest Google Font | Proprietary sans-serif → "Inter", "Lato", or "Source Sans Pro" |
+| 4. System font stack | Use the standard system font stack as last resort | `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` |
+
+**Step 3 — Report to user before proceeding:**
+
+```
+## Font Availability Report
+
+**Extracted fonts:**
+- font-heading: "ZohoPuvi" — NOT AVAILABLE in Figma
+  → Fallback: "Lato" (from design system fallback mode)
+- font-body: "Lato" — Available ✓
+
+**Action required:** Confirm fallback fonts are acceptable, or provide font files.
+```
+
+**Rules:**
+- Never silently substitute a font — always report to user
+- Never proceed to frame generation with an unavailable font — it will error at `loadFontAsync()`
+- If the user provides font files, instruct them to install locally (Figma desktop) or upload to the team (Figma cloud)
+- For Mode C (code output), unavailable fonts should use the Google Font CDN link if a similar font exists, or flag as `{PLACEHOLDER}` with a `/* TODO: install custom font */` comment
+
+---
+
+## 10 — Gap Handling
 
 After extraction, some canonical tokens will remain as `{PLACEHOLDER}`. The agent handles gaps as follows:
 
@@ -555,7 +606,7 @@ After extraction, some canonical tokens will remain as `{PLACEHOLDER}`. The agen
 | Gap Type | Severity | Action |
 |---|---|---|
 | `color-primary` missing | Critical | Stop — cannot generate CTAs without the primary color. Ask user to provide. |
-| `font-heading` or `font-body` missing | High | Proceed with system font stack fallback (`-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`). Flag in output. |
+| `font-heading` or `font-body` missing | High | Proceed with system font stack fallback (`-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`). Flag in output. See Section 9 for full fallback chain. |
 | `font-size-*` missing | High | Proceed with browser defaults + type scale ratios. Flag in output. |
 | `section-padding-y` missing | Medium | Proceed with `space-2xl` as fallback. Flag in output. |
 | `color-text-primary` missing | Medium | Proceed with `#1A1A1A` as fallback. Flag in output. |

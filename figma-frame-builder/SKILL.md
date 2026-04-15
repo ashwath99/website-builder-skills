@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.0.7"
+version: "5.0.8"
 ---
 
 # Figma Capture — Frame Generation
@@ -79,7 +79,129 @@ The new Figma MCP server consolidates write operations into a single unified too
 
 ---
 
-## 3 — Frame Structure
+## 3 — Figma MCP Runtime Rules (Critical)
+
+This section addresses the single biggest time sink in frame generation: **the Plugin API context resets between `use_figma` calls**. Every rule here is derived from Figma's official `figma-use` skill documentation and confirmed by production testing.
+
+→ Official reference: `https://github.com/figma/mcp-server-guide/blob/main/skills/figma-use/SKILL.md`
+
+### 3.1 — Context Reset Behavior
+
+**Every `use_figma` call runs in a fresh plugin context.** The frame created in Call 1 is invisible to Call 2 unless explicitly re-discovered. This is by design — not a bug.
+
+| Behavior | Implication |
+|---|---|
+| `figma.currentPage` resets to the first page on each call | Must call `setCurrentPageAsync` at the start of every call if targeting a non-default page |
+| `figma.getNodeById(id)` works — but only after page is loaded | Must `setCurrentPageAsync` before accessing any node by ID |
+| `page.children` may not be populated | Only populated after `setCurrentPageAsync` completes |
+| `getPluginData()` / `setPluginData()` are NOT supported | Cannot persist data between calls via plugin data — use returned node IDs instead |
+| `console.log()` output is NOT returned to the agent | Use `return` for all output — never rely on console |
+| `figma.notify()` throws "not implemented" | Never use — use `return` for status messages |
+| `figma.closePlugin()` must never be called | Code is auto-wrapped — calling it will error |
+| Code must NOT be wrapped in async IIFE | Already auto-wrapped — wrapping again causes errors |
+
+### 3.2 — Node ID Persistence (Mandatory)
+
+**Every `use_figma` call MUST return all created and mutated node IDs.** This is the only reliable way to reference nodes across calls.
+
+**Return format (required at the end of every script):**
+```javascript
+return {
+  createdNodeIds: [mainFrame.id, heroSection.id, featureSection.id],
+  mutatedNodeIds: [],
+  summary: "Created main frame + 2 sections"
+};
+```
+
+**Rules:**
+- Store every returned ID between calls — these are the only reliable handles
+- Pass stored IDs as string literals into subsequent `use_figma` calls
+- Never assume a node can be found by name — name searches are unreliable across context resets
+- If a `detachInstance()` call changes IDs, re-discover from a stable parent frame
+
+### 3.3 — Frame-Finder Preamble
+
+**Paste this pattern at the TOP of every `use_figma` call after the first one.** It navigates to the correct page and locates the main frame by its stored ID.
+
+```javascript
+// === Frame-Finder Preamble (required for all calls after initial creation) ===
+const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
+if (!targetPage) return { error: "Page '{PAGE_NAME}' not found" };
+await figma.setCurrentPageAsync(targetPage);
+
+const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
+if (!mainFrame) return { error: "Main frame not found — ID may have changed" };
+// === End Preamble — mainFrame is now available ===
+```
+
+Replace `{PAGE_NAME}` with the target Figma page name and `{MAIN_FRAME_ID}` with the ID returned from the first call.
+
+### 3.4 — Batching Strategy
+
+With a ~50K character limit per `use_figma` call, a full landing page (8–12 sections) cannot be built in one call. Split into batches:
+
+**Batch plan for a typical 10-section page:**
+
+| Batch | Sections | Why This Grouping |
+|---|---|---|
+| Batch 1 | Main frame + Hero + Trust Signals | Foundational — establishes the frame, returns the main frame ID used by all subsequent batches |
+| Batch 2 | Value Proposition + Feature Grid | Content-heavy sections with multiple child components |
+| Batch 3 | Feature Deep-Dive + Testimonials | Alternating layout patterns |
+| Batch 4 | Integration Grid + Metrics Bar + FAQ | Simpler sections, can fit more per call |
+| Batch 5 | Closing CTA + final adjustments | Last section + any spacing/color fixes |
+
+**Rules:**
+- Batch 1 is always the main frame creation — its returned ID is used by every subsequent batch
+- Every batch starts with the Frame-Finder Preamble (Section 3.3)
+- Every batch ends with `return { createdNodeIds: [...], mutatedNodeIds: [...] }`
+- Target 2–3 sections per batch (adjust based on component complexity)
+- If a batch fails, the frame is atomic — no partial nodes are created. Retry the same batch.
+- Between batches, verify the previous batch's nodes exist before proceeding
+
+**Estimated call budget:**
+
+| Section Count | Estimated Batches | Total `use_figma` Calls (incl. verification) |
+|---|---|---|
+| 6–8 sections | 3–4 build + 1–2 verify | 5–6 calls |
+| 9–12 sections | 4–5 build + 2–3 verify | 7–8 calls |
+| 12+ sections | 5–6 build + 2–3 verify | 8–10 calls |
+
+### 3.5 — Plugin API Gotchas Quick Reference
+
+These are from Figma's official docs — violating any of them causes silent failures or errors.
+
+**Colors:**
+- Use 0–1 range, not 0–255: `{ r: 0.91, g: 0.08, b: 0.17 }` for `#E9142B`
+- Paint objects use `{ r, g, b }` only — no `a` field. Opacity goes at paint level: `{ type: 'SOLID', color: {r, g, b}, opacity: 0.5 }`
+- Fills and strokes are read-only arrays — clone, modify, reassign. Never mutate in place.
+
+**Layout sizing (critical for collapsed frames):**
+- `layoutSizingHorizontal/Vertical = 'FILL'` must be set AFTER `parent.appendChild(child)` — setting before throws
+- `resize()` must be called BEFORE setting sizing modes — `resize()` resets them to `FIXED`
+- Correct order: create node → `resize()` → `appendChild()` → set sizing modes
+
+**Text:**
+- `await figma.loadFontAsync({ family, style })` BEFORE any text property change — never skip, never fire-and-forget
+- `lineHeight` and `letterSpacing` use `{ unit: 'PIXELS', value: N }` format, not bare numbers
+- Use `await figma.listAvailableFontsAsync()` to check font availability before loading
+
+**Positioning:**
+- New top-level nodes default to (0,0) — position them to the right of existing content
+- Nested nodes are positioned by their parent's auto-layout — don't manually position them
+
+**Variables:**
+- Always set `variable.scopes` explicitly — default `ALL_SCOPES` pollutes every property picker
+- Use specific scopes: `["FRAME_FILL", "SHAPE_FILL"]` for backgrounds, `["TEXT_FILL"]` for text
+
+**Error handling:**
+- On `use_figma` error, stop immediately — failed scripts are atomic (no partial execution)
+- Every async call must be `await`ed — unawaited calls cause silent failures
+
+→ For the complete code patterns reference: see `figma-frame-builder/figma-code-patterns.md`
+
+---
+
+## 4 — Frame Structure
 
 ### 3.1 — Top-Level Frame
 
@@ -119,7 +241,7 @@ Each page section is a child frame within the top-level frame.
 | FAQ / Accordion | `200px` |
 | All other sections | `200px` |
 
-After creating a section, the agent must verify the rendered height exceeds min-height. If it doesn't, the section is collapsed and needs fixing (see Section 6, Step 6).
+After creating a section, the agent must verify the rendered height exceeds min-height. If it doesn't, the section is collapsed and needs fixing (see Section 7, Step 6).
 
 ### 3.3 — Component Frames
 
@@ -145,9 +267,32 @@ Individual components within a section.
 
 **Root cause fix:** When populating content inside a component frame, ensure every text layer has `textAutoResize: "HEIGHT"` (width fixed, height grows with content) and every image placeholder has an explicit height set. These two properties are the most common cause of collapsed frames.
 
+**Common collapse patterns and their fixes (from production testing):**
+
+| Pattern | Cause | Fix |
+|---|---|---|
+| Section shows 10–19px height | `primaryAxisSizingMode` set to `AUTO` before children appended | Set `primaryAxisSizingMode = 'AUTO'` AFTER all children are appended |
+| Card shows as thin strip | `resize()` called after sizing mode set | Call `resize()` BEFORE setting any sizing modes — `resize()` resets them to `FIXED` |
+| Text exists but section is blank | Text node has `textAutoResize: "NONE"` | Set `textAutoResize: "HEIGHT"` on every text node |
+| Image placeholder has 0 height | Image frame created with no explicit size | Always `resize()` image placeholders to explicit dimensions |
+| Frame collapses after `detachInstance()` | Instance detach changes node IDs | Re-discover nodes from stable parent, don't cache detached IDs |
+
+**Correct operation order (critical):**
+```
+1. Create frame → figma.createFrame()
+2. resize()     → frame.resize(width, height)     // BEFORE sizing modes
+3. Layout mode  → frame.layoutMode = "VERTICAL"
+4. Sizing       → frame.primaryAxisSizingMode = "AUTO"
+5. Min-height   → frame.minHeight = 200
+6. Add children → frame.appendChild(child)         // BEFORE FILL sizing
+7. FILL sizing  → child.layoutSizingHorizontal = "FILL"  // AFTER appendChild
+```
+
+→ For complete code patterns: see `figma-frame-builder/figma-code-patterns.md`
+
 ---
 
-## 4 — Layer Naming Convention
+## 5 — Layer Naming Convention
 
 Consistent layer names enable Mode B to parse the frame reliably when generating code later.
 
@@ -186,7 +331,7 @@ Consistent layer names enable Mode B to parse the frame reliably when generating
 
 ---
 
-## 5 — Content Population
+## 6 — Content Population
 
 ### 5.1 — Text Content
 
@@ -253,7 +398,7 @@ Before creating any element, the agent should check for existing design system c
 
 ---
 
-## 6 — Generation Process
+## 7 — Generation Process
 
 ### Step 1: Verify Connection and Skills
 ```
@@ -274,7 +419,7 @@ Catalog available components for reuse. Note any gaps that require building from
 ### Step 3: Create Top-Level Frame
 ```
 Invoke /figma-use skill
-Call use_figma → create frame on target page with properties from Section 3.1
+Call use_figma → create frame on target page with properties from Section 4.1
 ```
 
 ### Step 4: Build Section Frames (Top to Bottom)
@@ -325,7 +470,7 @@ Detection method:
 Fix procedure for collapsed sections:
 ```
 1. Read the collapsed frame via get_design_context → check actual height
-2. If height < min-height from Section 3.2/3.3 → collapsed confirmed
+2. If height < min-height from Section 4.2/4.3 → collapsed confirmed
 3. Check child layers:
    a. Text layers missing textAutoResize: "HEIGHT" → fix
    b. Image placeholders missing explicit height → set height
@@ -350,7 +495,7 @@ Present to user with summary
 
 ---
 
-## 7 — Post-Generation
+## 8 — Post-Generation
 
 After the frame is generated:
 
@@ -364,13 +509,13 @@ After the frame is generated:
 
 ---
 
-## 8 — Blueprint → Figma (C → A Escalation)
+## 9 — Blueprint → Figma (C → A Escalation)
 
 Two escalation paths are available when Mode C output needs to become a Figma frame.
 
 ### Path A: Blueprint → use_figma (Structured Build)
 
-When Mode C escalates to Figma using the blueprint as a pre-decided spec, the agent executes Steps 3–7 from Section 6 directly — no brief re-parsing or pattern selection.
+When Mode C escalates to Figma using the blueprint as a pre-decided spec, the agent executes Steps 3–7 from Section 7 directly — no brief re-parsing or pattern selection.
 
 **When to use:** When you want a structured Figma frame built from the blueprint with proper layer naming, auto-layout, and design system bindings. Best for frames that will be edited further in Figma.
 
@@ -388,7 +533,7 @@ When Mode C has already produced working HTML, the agent can push the rendered H
 5. Run Mode B against the corrected frame for final production code
 ```
 
-**When to use:** When you want a fast visual representation in Figma without building structured frames from scratch. The output layers mirror the rendered HTML rather than following the Section 4 naming convention. Best for quick review cycles.
+**When to use:** When you want a fast visual representation in Figma without building structured frames from scratch. The output layers mirror the rendered HTML rather than following the Section 5 naming convention. Best for quick review cycles.
 
 **Tradeoff:** Path B layers won't have the structured naming and auto-layout of Path A. If extensive Figma editing is planned, Path A is preferred. If the goal is visual review followed by Mode B code generation, Path B is faster.
 
@@ -396,7 +541,7 @@ When Mode C has already produced working HTML, the agent can push the rendered H
 
 ---
 
-## 9 — Custom Skill Packaging (Optional)
+## 10 — Custom Skill Packaging (Optional)
 
 Your skill files can be packaged as installable Figma skills for sharing across teams or the Figma Community.
 
