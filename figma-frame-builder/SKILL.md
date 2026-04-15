@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.0.8"
+version: "5.0.9"
 ---
 
 # Figma Capture — Frame Generation
@@ -12,6 +12,8 @@ This file governs how the agent creates Figma design frames from design specs (p
 → For component specs being placed in frames: see `component-library`
 → For token values applied to frame elements: see `design-tokens`
 → For section sequencing in the frame: see `layout-patterns`
+→ For Plugin API code snippets: see `figma-frame-builder/figma-code-patterns.md`
+→ For layout-specific Figma code: see `figma-frame-builder/layout-code-templates.md`
 
 ---
 

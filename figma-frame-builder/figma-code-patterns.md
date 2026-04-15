@@ -313,33 +313,135 @@ return {
 
 ## 9 — Component Search and Instantiation
 
-```javascript
-// Step 1: Search for existing component in connected libraries
-// (Use search_design_system MCP tool — not use_figma)
+### 9.1 — Inspect Available Components (Run First)
 
-// Step 2: If component key is found, instantiate it:
+Before trying to instantiate, discover what's in the connected libraries:
+
+```javascript
+// List all components on the current page (local)
+const results = [];
+for (const page of figma.root.children) {
+  await figma.setCurrentPageAsync(page);
+  page.findAll(n => {
+    if (n.type === 'COMPONENT' || n.type === 'COMPONENT_SET') {
+      results.push({
+        page: page.name,
+        name: n.name,
+        type: n.type,
+        id: n.id,
+        key: n.key,
+        // For COMPONENT_SET, list variant properties
+        properties: n.type === 'COMPONENT_SET'
+          ? Object.entries(n.componentPropertyDefinitions || {}).map(([k, v]) => ({
+              name: k,
+              type: v.type,
+              options: v.type === 'VARIANT' ? v.variantOptions : undefined,
+              defaultValue: v.defaultValue
+            }))
+          : undefined
+      });
+    }
+    return false;
+  });
+}
+return { components: results, count: results.length };
+```
+
+### 9.2 — Import and Instantiate a Library Component
+
+```javascript
+// Import by key (from search_design_system results)
 const component = await figma.importComponentByKeyAsync("{COMPONENT_KEY}");
 const instance = component.createInstance();
 instance.name = "Button: Primary CTA";
 
-// Step 3: Set variant properties (if component has variants)
-// First inspect what properties exist:
-// instance.componentProperties → lists available properties
-
-// Step 4: Override text content in the instance
-// Find the text node inside the instance:
-const textNode = instance.findOne(n => n.type === "TEXT" && n.name === "Label");
-if (textNode) {
-  await figma.loadFontAsync(textNode.fontName);
-  textNode.characters = "{NEW_TEXT}";
-}
-
-// Step 5: Append and size
+// Append BEFORE setting sizing
 {PARENT_NODE}.appendChild(instance);
-instance.layoutSizingHorizontal = "FILL"; // Or "FIXED" depending on layout
+instance.layoutSizingHorizontal = "FILL";
+
+return { instanceId: instance.id, instanceName: instance.name };
 ```
 
-**Important:** Component instantiation is complex with variant properties and nested overrides. If the component doesn't respond to property changes as expected, fall back to building from scratch using the patterns in Sections 4–7 above. Don't spend more than 2 attempts on component instantiation per component type.
+### 9.3 — Read Component Properties (Before Setting Them)
+
+```javascript
+// CRITICAL: Always inspect properties first — never guess property names
+const instance = figma.getNodeById("{INSTANCE_ID}");
+
+const props = instance.componentProperties;
+const propDefs = {};
+
+// Read all property definitions
+for (const [key, val] of Object.entries(props)) {
+  propDefs[key] = {
+    type: val.type,            // 'VARIANT', 'TEXT', 'BOOLEAN', 'INSTANCE_SWAP'
+    value: val.value,          // Current value
+    // For VARIANT type, preferred values come from componentPropertyDefinitions
+  };
+}
+
+return { properties: propDefs };
+```
+
+### 9.4 — Set Variant Properties
+
+```javascript
+const instance = figma.getNodeById("{INSTANCE_ID}");
+
+// Set variant property — property name MUST match exactly (case-sensitive)
+// Use the key format from componentProperties, which is typically "Property Name#nodeId"
+instance.setProperties({
+  "{PROPERTY_KEY}": "{VARIANT_VALUE}"
+  // Example: "Size#123:456": "Large"
+  // Example: "Style#123:456": "Primary"
+});
+
+return { updated: true, instanceId: instance.id };
+```
+
+**Gotcha:** Variant property keys often include a `#nodeId` suffix (e.g., `"Size#123:456"`). Use the exact key from `instance.componentProperties`, not just the display name.
+
+### 9.5 — Override Text in Component Instances
+
+```javascript
+const instance = figma.getNodeById("{INSTANCE_ID}");
+
+// Find all text nodes inside the instance
+const textNodes = instance.findAll(n => n.type === "TEXT");
+
+const textMap = textNodes.map(t => ({
+  name: t.name,
+  characters: t.characters,
+  id: t.id
+}));
+
+// Override a specific text node
+for (const t of textNodes) {
+  if (t.name === "{TEXT_LAYER_NAME}") {
+    await figma.loadFontAsync(t.fontName);  // MUST load font first
+    t.characters = "{NEW_TEXT}";
+  }
+}
+
+return { textNodes: textMap };
+```
+
+**Important — Text property overrides vs direct text editing:**
+- If the component has a TEXT-type component property (visible in `componentProperties`), use `setProperties()` instead
+- If it's a nested text layer, use direct `characters` assignment as shown above
+- Always `loadFontAsync()` before changing characters — even on instances
+
+### 9.6 — Fallback Strategy
+
+Component instantiation with complex design systems (like UEMS Design System 3.0) is non-trivial. Follow this escalation:
+
+| Attempt | Action | Time Budget |
+|---|---|---|
+| 1 | Search library → import → instantiate → set properties | 1 `use_figma` call |
+| 2 | If properties fail, inspect instance structure → try direct child overrides | 1 `use_figma` call |
+| 3 (fallback) | Abandon component reuse → build from scratch using Sections 4–7 | Continue with raw frames |
+
+**Rule:** Do not spend more than 2 `use_figma` calls trying to get a component instance working. Raw frame construction is predictable and always works.
 
 ---
 
@@ -391,6 +493,196 @@ return {
   ).join('\n')
 };
 ```
+
+---
+
+## 11 — Token Extraction Helper (Figma Variable Resolver)
+
+**Use when extracting tokens from Figma variables (Source 4).** Resolves alias chains to final values.
+
+### 11.1 — List All Variable Collections
+
+```javascript
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const result = [];
+
+for (const coll of collections) {
+  const vars = [];
+  for (const varId of coll.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(varId);
+    vars.push({
+      name: v.name,
+      id: v.id,
+      type: v.resolvedType,  // 'COLOR', 'FLOAT', 'STRING'
+      scopes: v.scopes
+    });
+  }
+  result.push({
+    collectionName: coll.name,
+    collectionId: coll.id,
+    modes: coll.modes.map(m => ({ name: m.name, id: m.modeId })),
+    variableCount: vars.length,
+    variables: vars
+  });
+}
+
+return result;
+```
+
+### 11.2 — Resolve All Color Variables (With Alias Chain)
+
+```javascript
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const resolved = [];
+
+for (const coll of collections) {
+  const modeId = coll.modes[0].modeId;  // Use first mode (or specify)
+
+  for (const varId of coll.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(varId);
+    if (v.resolvedType !== 'COLOR') continue;
+
+    let value = v.valuesByMode[modeId];
+    let aliasChain = [v.name];
+    let resolvedValue = null;
+
+    // Resolve alias chain
+    while (value && value.type === 'VARIABLE_ALIAS') {
+      const aliasVar = await figma.variables.getVariableByIdAsync(value.id);
+      aliasChain.push(aliasVar.name);
+      // Find the mode in the alias variable's collection
+      const aliasColl = await figma.variables.getVariableCollectionByIdAsync(
+        aliasVar.variableCollectionId
+      );
+      const aliasModeId = aliasColl.modes[0].modeId;
+      value = aliasVar.valuesByMode[aliasModeId];
+    }
+
+    // Final value should be an RGBA object { r, g, b, a }
+    if (value && typeof value === 'object' && 'r' in value) {
+      const hex = '#' +
+        Math.round(value.r * 255).toString(16).padStart(2, '0') +
+        Math.round(value.g * 255).toString(16).padStart(2, '0') +
+        Math.round(value.b * 255).toString(16).padStart(2, '0');
+      resolvedValue = { rgb: value, hex: hex.toUpperCase() };
+    }
+
+    resolved.push({
+      name: v.name,
+      collection: coll.name,
+      aliasChain: aliasChain.length > 1 ? aliasChain : undefined,
+      value: resolvedValue
+    });
+  }
+}
+
+return {
+  colorCount: resolved.length,
+  colors: resolved,
+  summary: resolved.map(c =>
+    `${c.name}: ${c.value ? c.value.hex : 'UNRESOLVED'}` +
+    (c.aliasChain ? ` (via ${c.aliasChain.join(' → ')})` : '')
+  ).join('\n')
+};
+```
+
+### 11.3 — Resolve Typography Variables
+
+```javascript
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const typography = [];
+
+for (const coll of collections) {
+  const modeId = coll.modes[0].modeId;
+
+  for (const varId of coll.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(varId);
+
+    // Check if name suggests typography
+    const isTypo = /font|type|text|heading|body|size|weight|line.?height|letter.?spacing/i
+      .test(v.name);
+    if (!isTypo) continue;
+
+    let value = v.valuesByMode[modeId];
+    let aliasChain = [v.name];
+
+    // Resolve alias chain
+    while (value && value.type === 'VARIABLE_ALIAS') {
+      const aliasVar = await figma.variables.getVariableByIdAsync(value.id);
+      aliasChain.push(aliasVar.name);
+      const aliasColl = await figma.variables.getVariableCollectionByIdAsync(
+        aliasVar.variableCollectionId
+      );
+      value = aliasVar.valuesByMode[aliasColl.modes[0].modeId];
+    }
+
+    typography.push({
+      name: v.name,
+      type: v.resolvedType,
+      collection: coll.name,
+      aliasChain: aliasChain.length > 1 ? aliasChain : undefined,
+      value: value
+    });
+  }
+}
+
+return {
+  count: typography.length,
+  variables: typography,
+  summary: typography.map(t =>
+    `${t.name} (${t.type}): ${JSON.stringify(t.value)}` +
+    (t.aliasChain ? ` (via ${t.aliasChain.join(' → ')})` : '')
+  ).join('\n')
+};
+```
+
+### 11.4 — Multi-Mode Resolution (Fallback Fonts)
+
+Some collections have multiple modes (e.g., "Default" and "Fallback"). Use this to check all modes when the primary mode's font isn't available:
+
+```javascript
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const multiMode = [];
+
+for (const coll of collections) {
+  if (coll.modes.length <= 1) continue;  // Skip single-mode collections
+
+  for (const varId of coll.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(varId);
+    if (v.resolvedType !== 'STRING') continue;  // Font families are STRING type
+
+    const values = {};
+    for (const mode of coll.modes) {
+      let val = v.valuesByMode[mode.modeId];
+      // Resolve if alias
+      while (val && val.type === 'VARIABLE_ALIAS') {
+        const alias = await figma.variables.getVariableByIdAsync(val.id);
+        const aliasColl = await figma.variables.getVariableCollectionByIdAsync(
+          alias.variableCollectionId
+        );
+        val = alias.valuesByMode[aliasColl.modes[0].modeId];
+      }
+      values[mode.name] = val;
+    }
+
+    multiMode.push({
+      name: v.name,
+      collection: coll.name,
+      valuesByMode: values
+    });
+  }
+}
+
+return {
+  count: multiMode.length,
+  variables: multiMode,
+  summary: multiMode.map(m =>
+    `${m.name}: ${Object.entries(m.valuesByMode).map(([k, v]) => `${k}="${v}"`).join(', ')}`
+  ).join('\n')
+};
+```
+
+**Usage:** When `font-heading` resolves to "ZohoPuvi" (unavailable), check if a "Fallback" mode exists that resolves to "Lato" or another available font.
 
 ---
 

@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [5.0.8] — 2026-04-15
+## [5.0.9] — 2026-04-15
 
 ### Added
 
@@ -17,16 +17,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **Section 3.4 — Batching Strategy** — How to split 8–12 section pages across 4–6 `use_figma` calls. Estimated call budgets per section count.
   - **Section 3.5 — Plugin API Gotchas Quick Reference** — Colors (0–1 range, no `a` field), layout sizing order, text font loading, positioning rules, variable scopes, error handling. All from official Figma docs.
   - All subsequent sections renumbered 4–10.
-- **`figma-frame-builder/figma-code-patterns.md`** (new file) — Production-ready Plugin API code snippets for: frame-finder preamble, top-level frame creation, section frames, text nodes, feature cards, grid containers, CTA buttons, font availability check, component instantiation, collapsed frame diagnosis. Includes correct operation order reference.
+- **`figma-frame-builder/figma-code-patterns.md`** (new file) — Production-ready Plugin API code snippets:
+  - Sections 1–7: Frame-finder preamble, top-level frame, section frames, text nodes, feature cards, grid containers, CTA buttons
+  - Section 8: Font availability check
+  - Section 9: Component instantiation patterns (P1) — inspect available components, import by key, read/set variant properties (including `#nodeId` suffix gotcha), override text in instances, fallback strategy (max 2 attempts then build from scratch)
+  - Section 10: Collapsed frame diagnosis
+  - Section 11: Token extraction helper (P2) — Figma variable alias chain resolver for colors, typography, and multi-mode collections (handles fallback fonts like ZohoPuvi → Lato)
+  - Quick Reference: correct operation order
+- **`figma-frame-builder/layout-code-templates.md`** (new file, P1) — Plugin API code templates for all 12 layout types from `layout-patterns/SKILL.md`:
+  - `split-50`, `split-60-40`, `grid-2col`, `grid-3col`, `grid-4col`, `full-bleed-text`, `tab-panel`, `accordion-stack`, `logo-bar`, `stat-band`, `bento`, `step-flow`
+  - Each template includes auto-layout setup, sizing, child creation, and alignment
+  - Layout selection quick reference with batching guidance
 - **`design-tokens/token-sources.md` — Section 9: Font Availability Check** (new section) — Post-extraction font verification before frame generation. Fallback chain: same family different style → design system fallback mode → visually similar Google Font → system stack. Mandatory user report before proceeding.
 
 ### Changed
 
 - **`figma-frame-builder/SKILL.md` — Collapsed Frame Prevention** — Added specific collapse patterns table with causes and fixes (from production testing). Added correct operation order for create → resize → layout → appendChild → FILL sizing.
+- **`figma-frame-builder/SKILL.md` — Cross-references** — Added pointers to new `figma-code-patterns.md` and `layout-code-templates.md` files.
 
 ### Why
 
-Mode A execution rated 6.5/10 in testing. Context reset between `use_figma` calls cost ~40% of build time. Builder had to discover Plugin API patterns (nodeId persistence, page context loading, font resolution) by trial and error. These are now documented from Figma's official MCP guide + production testing experience.
+Mode A execution rated 6.5/10 in testing. Context reset between `use_figma` calls cost ~40% of build time. Builder had to discover Plugin API patterns, write every layout from scratch, and manually resolve font alias chains. All P0, P1, and P2 items from the builder's review are now addressed.
 
 ---
 
