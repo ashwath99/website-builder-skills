@@ -6,6 +6,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.1.0] — 2026-04-16
+
+### Added
+
+- **`figma-frame-builder/SKILL.md` — MCP Tool Prefix Discovery** (#2) — Agent must discover tool prefix at runtime (e.g., `mcp__Figma__` or UUID-based) by searching deferred tools, not hardcoding.
+- **`figma-frame-builder/SKILL.md` — Component Import Decision Matrix** (#5) — When to import DS components vs build from primitives. Simple components (buttons, icons) → import. Complex components (cards, section layouts) → build from primitives.
+- **`figma-frame-builder/SKILL.md` — Asset Pipeline** (#8) — How to place images via `setImageFill`, sourcing strategy (brief attachments → DS icons → reference screenshots → placeholders), standard placeholder sizes for hero/icons/logos/avatars.
+- **`figma-code-patterns.md` — Font Gotchas Table** (#3) — Known issues with Lato (no Semi Bold), Inter (space in "Semi Bold"), ZohoPuvi (proprietary), Segoe UI (Windows-only). Batched font check script replaces one-at-a-time checking.
+- **`figma-code-patterns.md` — Effects blendMode fix** (#4) — `DROP_SHADOW` requires `blendMode: 'NORMAL'` — omitting it crashes the script. Added to gotchas quick reference.
+- **`execution-prompts/SKILL.md` — Build Phase Quick Reference Card** (#7) — Condensed template generated after token extraction + brief parsing. Contains resolved colors (0-1 range), fonts, spacing, section plan, batching plan, DS component keys, and frame IDs. Replaces need to re-read full skill files during build phase — saves 40%+ context window.
+- **`brief-parser/SKILL.md` — Step 1b: Content Deduplication** (#6) — When brief source is website markdown, same content appears in nav/hero/features/footer. New step strips navigation/footer content, collapses duplicate feature mentions to most detailed instance, and reduces CTA repetition.
+
+### Changed
+
+- **`design-tokens/token-sources.md` — Source 4 (Figma DS) rewritten** (#1) — `getLocalVariableCollectionsAsync()` only returns local variables, missing library tokens entirely. New extraction path: try local first → if 0 results, use `teamLibrary.getAvailableLibraryVariableCollectionsAsync()` or MCP tools (`get_variable_defs`, `search_design_system`) as fallback. Known limitation documented for complex alias chains.
+
+### Why
+
+Second Mode A test (Endpoint Central landing page) rated 7/10 — up from 6.5. Remaining friction: library token extraction returned 0 results (30% context burned on manual resolution), MCP prefix was a UUID scavenger hunt, font fallback chain had unnecessary round-trips, and context window hit compaction before Batch 1 started. All 8 items from the builder's feedback report are now addressed.
+
+---
+
 ## [5.0.9] — 2026-04-15
 
 ### Added

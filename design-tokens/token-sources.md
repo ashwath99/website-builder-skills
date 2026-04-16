@@ -246,22 +246,53 @@ Merge Track A (color tokens) and Track B (non-color tokens) into a single resolv
 
 **Extraction steps:**
 
-1. **Run the variable extraction script** via `use_figma`. The script is defined in `master-reference/SKILL.md` — Variable Extraction Pattern section. It reads all local variable collections and formats them as CSS custom properties.
+**Step 1 — Try local variables first** via `use_figma`:
+Run the variable extraction script from `figma-frame-builder/figma-code-patterns.md` Section 11.1–11.2. This calls `figma.variables.getLocalVariableCollectionsAsync()` to read all local variable collections.
 
-2. **Alternatively**, use `search_design_system` with broad queries (`"color"`, `"spacing"`, `"typography"`) to surface design system variables.
+**Step 2 — If local extraction returns 0 variables, try library variables:**
+Most production design systems (e.g., UEMS DS 3.0) store tokens in a connected **library**, not in the local file. `getLocalVariableCollectionsAsync()` only returns variables defined in the current file — it will miss library tokens entirely.
 
-3. **Collect the output** — a flat list of variable name → value pairs:
-   ```
-   color/brand/primary: #E9142B
-   typography/heading/font-family: ZohoPuvi
-   spacing/md: 16px
-   ```
+Library extraction path:
+```
+Option A (MCP tools — preferred):
+1. Call get_variable_defs on any frame that uses the design system
+   → Returns all variable bindings on that frame's elements
+   → Captures colors, spacing, typography actually in use
+2. Call search_design_system with queries: "color", "spacing", "typography"
+   → Returns variable names and values from connected libraries
 
-4. **Apply token name normalization** (see Section 8) — Figma variable names use `/` path separators and may use nested naming conventions.
+Option B (Plugin API — if MCP tools don't return enough):
+1. Via use_figma, call:
+   const collections = await figma.teamLibrary
+     .getAvailableLibraryVariableCollectionsAsync();
+   → Returns metadata for all connected library collections
+2. For each collection, call:
+   const variables = await figma.teamLibrary
+     .getLibraryVariableCollectionById(collection.key);
+   → Returns variable names and values from the library
+3. Resolve alias chains using the pattern in
+   figma-code-patterns.md Section 11.2
+```
 
-5. **Bind to Figma variables in output** — when tokens are sourced from a Figma design system, the agent should bind CSS custom properties to Figma variables in the generated frame (Mode A) rather than hardcoding values. This ensures the Figma output stays in sync with the design system.
+**Step 3 — Combine and deduplicate:**
+If both local and library results exist, library values take precedence for any conflicts (the library is the source of truth).
 
-6. **Flag gaps** — tokens with no matching Figma variable are left as `{PLACEHOLDER}`.
+**Step 4 — Collect the output** — a flat list of variable name → value pairs:
+```
+color/brand/primary: #E9142B
+typography/heading/font-family: ZohoPuvi
+spacing/md: 16px
+```
+
+**Step 5 — Apply token name normalization** (see Section 8) — Figma variable names use `/` path separators and may use nested naming conventions.
+
+**Step 6 — Run font availability check** — see Section 9. Proprietary fonts (ZohoPuvi, etc.) may not be available in Figma cloud.
+
+**Step 7 — Bind to Figma variables in output** — when tokens are sourced from a Figma design system, the agent should bind CSS custom properties to Figma variables in the generated frame (Mode A) rather than hardcoding values. This ensures the Figma output stays in sync with the design system.
+
+**Step 8 — Flag gaps** — tokens with no matching Figma variable are left as `{PLACEHOLDER}`.
+
+**Known limitation:** Library variable extraction may return variable names without resolved values if the library uses complex alias chains across multiple collections. In that case, fall back to `search_design_system` + `get_design_context` on a reference frame to capture the actual rendered values.
 
 **Figma variable naming conventions — common patterns:**
 

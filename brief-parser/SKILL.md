@@ -1,7 +1,7 @@
 ---
 name: brief-parser
 description: Parses marketing content briefs to infer page type, classify audiences, identify page sections, detect content gaps, and produce structured input for downstream skills. Use when processing any content brief, marketing document, or product copy that needs to be converted into a web page structure.
-version: "5.0.1"
+version: "5.1.0"
 ---
 
 # Content Brief — Parsing & Section Mapping
@@ -44,6 +44,34 @@ Read the entire brief. Produce a flat list of every content element found:
 ```
 
 Do not interpret or reorganize yet — just inventory what exists.
+
+### Step 1b: Content Deduplication
+
+**Why this step exists:** When the brief source is a website markdown export (scraped HTML converted to markdown), the same content often appears multiple times — in navigation menus, hero areas, feature sections, footer links, and sidebar elements. Without deduplication, the agent maps the same features to 3+ sections, inflating the page and creating ambiguous section boundaries.
+
+**Process:**
+
+1. **Identify navigation and footer content** — Text that appears in `<nav>`, header menus, footer link lists, breadcrumbs, or sidebar navigation is structural, not page content. Mark it as `[NAV]` or `[FOOTER]` and exclude from section mapping.
+
+2. **Detect duplicate feature mentions** — If the same feature name (or near-identical phrasing) appears in 2+ locations:
+   - Keep the **most detailed instance** (the one with the longest description, supporting bullet points, or accompanying image references)
+   - Mark shorter mentions as duplicates: `[DUP — see {location of primary instance}]`
+   - The primary instance is the one that will map to a section; duplicates are discarded
+
+3. **Collapse repeated CTA text** — The same CTA ("Start Free Trial", "Get a Quote") may appear 5+ times across the page. Inventory it once with a count: `CTA: "Start Free Trial" (appears 6×)`.
+
+4. **Preserve unique content** — Any content element that is NOT a duplicate of something already inventoried remains in the flat list for section mapping.
+
+**Output:** A deduplicated inventory where each content element appears exactly once, with navigation/footer content excluded. This feeds into Step 2 and Step 3.
+
+**Example:**
+```
+Before dedup: 47 content elements (including 3× "Endpoint Security" mentions,
+  8× navigation links, 5× "Start Free Trial" CTAs)
+After dedup: 28 unique content elements
+  — 12 nav/footer items excluded
+  — 7 duplicate feature mentions collapsed
+```
 
 ### Step 2: Infer Page Type and Classify Audience
 

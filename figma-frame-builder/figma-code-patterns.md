@@ -157,9 +157,11 @@ card.cornerRadius = {RADIUS_MD};
 card.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
 card.effects = [{
   type: 'DROP_SHADOW',
+  blendMode: 'NORMAL',          // REQUIRED — omitting this causes script failure
   color: { r: 0, g: 0, b: 0, a: 0.08 },
   offset: { x: 0, y: 4 },
   radius: 24,
+  spread: 0,
   visible: true
 }];
 
@@ -267,47 +269,90 @@ button.appendChild(label);
 
 ## 8 — Font Availability Check
 
-**Run this BEFORE building any frames to verify fonts are available.**
+**Run this as a SINGLE `use_figma` call BEFORE building any frames.** This checks all required fonts and their fallback candidates in one round-trip — do not check fonts one-at-a-time.
 
 ```javascript
 const fonts = await figma.listAvailableFontsAsync();
 
-const requiredFonts = [
+// Primary fonts (from token extraction)
+const primaryFonts = [
   { family: "{HEADING_FONT}", style: "Bold" },
   { family: "{HEADING_FONT}", style: "SemiBold" },
   { family: "{BODY_FONT}", style: "Regular" },
   { family: "{BODY_FONT}", style: "Bold" }
 ];
 
+// Fallback candidates (check all at once)
+const fallbackFamilies = ["Inter", "Lato", "Source Sans Pro", "Roboto", "Open Sans"];
+
 const results = [];
-for (const req of requiredFonts) {
+for (const req of primaryFonts) {
   const found = fonts.some(f =>
     f.fontName.family === req.family && f.fontName.style === req.style
   );
-  results.push({
+  const entry = {
     font: `${req.family} ${req.style}`,
     available: found
-  });
+  };
 
   if (!found) {
     // Check if family exists with different styles
     const familyFonts = fonts.filter(f => f.fontName.family === req.family);
     if (familyFonts.length > 0) {
-      results[results.length - 1].availableStyles =
-        familyFonts.map(f => f.fontName.style);
+      entry.availableStyles = familyFonts.map(f => f.fontName.style);
+    }
+    // Find first available fallback with matching style
+    for (const fb of fallbackFamilies) {
+      if (fonts.some(f => f.fontName.family === fb && f.fontName.style === req.style)) {
+        entry.suggestedFallback = `${fb} ${req.style}`;
+        break;
+      }
+      // Try without exact style match
+      const fbStyles = fonts.filter(f => f.fontName.family === fb).map(f => f.fontName.style);
+      if (fbStyles.length > 0) {
+        entry.suggestedFallback = `${fb} ${fbStyles[0]}`;
+        entry.fallbackNote = `Exact style "${req.style}" not available; using "${fbStyles[0]}"`;
+        break;
+      }
     }
   }
+  results.push(entry);
+}
+
+// Also preload available fallback family data for the report
+const fallbackAvailability = {};
+for (const fb of fallbackFamilies) {
+  const styles = fonts.filter(f => f.fontName.family === fb).map(f => f.fontName.style);
+  if (styles.length > 0) fallbackAvailability[fb] = styles;
 }
 
 return {
   results,
   allAvailable: results.every(r => r.available),
+  fallbackFamilies: fallbackAvailability,
   summary: results.map(r =>
     `${r.font}: ${r.available ? 'OK' : 'MISSING' +
-      (r.availableStyles ? ' (available: ' + r.availableStyles.join(', ') + ')' : '')}`
+      (r.availableStyles ? ' (family exists with: ' + r.availableStyles.join(', ') + ')' : '') +
+      (r.suggestedFallback ? ' → fallback: ' + r.suggestedFallback : '')}`
   ).join('\n')
 };
 ```
+
+### Common Font Gotchas
+
+These are known issues encountered during production testing. Check this table when font loading fails unexpectedly:
+
+| Font Family | Gotcha | Fix |
+|---|---|---|
+| **Lato** | Has no "Semi Bold" or "SemiBold" style | Use "Bold" or "Regular" only. For medium weight, use "Regular" with heavier appearance. |
+| **Inter** | Uses "Semi Bold" (with space), not "SemiBold" | Match the exact style string from `listAvailableFontsAsync()` |
+| **Roboto** | "Thin" and "Light" styles exist but "Book" does not | Use "Light" or "Regular" for lighter weights |
+| **ZohoPuvi** | Proprietary — not in Figma cloud fonts | Use Lato or Inter as fallback (see `token-sources.md` Section 9) |
+| **Segoe UI** | Available on Windows, not on Mac/Linux Figma cloud | Use Inter or Roboto as cross-platform fallback |
+| **SF Pro** | Apple system font — limited availability in Figma | Use Inter as fallback |
+| Any font | Style name mismatch ("Bold" vs "bold" vs "700") | Style strings are case-sensitive — always verify with `listAvailableFontsAsync()` |
+
+**Rule:** Never assume a font style exists. Always check the output of `listAvailableFontsAsync()` for the exact `{ family, style }` pair before calling `loadFontAsync()`.
 
 ---
 

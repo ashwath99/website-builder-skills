@@ -1,7 +1,7 @@
 ---
 name: execution-prompts
 description: Master prompt templates for executing the landing page pipeline through AI coding agents. Contains Mode A/B/C templates, shared preamble, Page Blueprint format, prompt modifiers, and validation checklists. Use when starting any execution mode, writing agent prompts, or validating output.
-version: "5.0.1"
+version: "5.1.0"
 ---
 
 # Agent Execution Prompt — Master Templates
@@ -114,6 +114,77 @@ START — Deploy Figma design
 - Review the generated Figma frame
 - Make manual corrections if needed
 - If proceeding to code: run Mode B against the corrected frame
+
+### Build Phase Quick Reference Card
+
+**Context window pressure is real.** Reading 8–10 skill files (200–400 lines each) plus the brief plus token-values.md can consume 40%+ of context before the build even starts. After the preparation phase (steps 1–7 above), the agent should generate a condensed quick reference card and use ONLY this card during the build phase. The full skill files can be re-read if a specific rule needs clarification, but the build batches should work from the card.
+
+**Generate this card after token extraction and brief parsing, before the first `use_figma` call:**
+
+```markdown
+# Build Card — {Product Name}
+
+## Figma Target
+- File: {figma-file-url}
+- Page: {page-name}
+- MCP prefix: {discovered prefix, e.g., mcp__Figma__}
+
+## Resolved Fonts
+- Heading: {font-family} {styles available}
+- Body: {font-family} {styles available}
+- (Fallback applied: yes/no — original was {original-font})
+
+## Resolved Colors (0-1 range for Figma)
+- Primary: r={R} g={G} b={B} | hex={HEX}
+- CTA: r={R} g={G} b={B} | hex={HEX}
+- CTA hover: r={R} g={G} b={B} | hex={HEX}
+- Text primary: r={R} g={G} b={B}
+- Text secondary: r={R} g={G} b={B}
+- BG page: r={R} g={G} b={B}
+- BG surface: r={R} g={G} b={B}
+- Tint-1 surface: r={R} g={G} b={B} | border: r={R} g={G} b={B}
+- Tint-2 surface: r={R} g={G} b={B} | border: r={R} g={G} b={B}
+
+## Spacing (px)
+- Section padding Y: {N}
+- Grid gutter: {N}
+- Card padding: {N}
+- Content max-width: {N}
+- Space scale: xs={N} sm={N} md={N} lg={N} xl={N}
+
+## Elevation
+- Shadow MD: {value} (remember blendMode: 'NORMAL')
+- Radius MD: {N}px
+
+## Section Plan
+| # | Section Type | Layout | Tint | Component | Min-Height |
+|---|---|---|---|---|---|
+| 1 | Hero | split-50 | none | Hero: Split Image | 500px |
+| 2 | Trust Signals | logo-bar | tint-1 | Logo Bar | 200px |
+| 3 | Feature Grid | grid-3col | none | Feature Card ×6 | 300px |
+| ... | ... | ... | ... | ... | ... |
+
+## Batching Plan
+- Batch 1: Main frame + sections 1-2 → returns {mainFrameId}
+- Batch 2: Sections 3-4
+- Batch 3: Sections 5-6
+- Batch 4: Sections 7-9
+- Batch 5: Verification + fixes
+
+## DS Components to Import
+- Button Primary: key={key} (or: build from primitives)
+- (list any others found via search_design_system)
+
+## Frame-Finder Preamble
+Page: "{page-name}" | Main frame ID: {to be filled after Batch 1}
+
+## Asset Placeholders
+- Hero: gray rect 1440×500 labeled "Hero Screenshot"
+- Feature icons: gray circles 48×48 labeled per feature
+- Logos: gray rects 120×40 per company
+```
+
+**Rule:** This card replaces the need to re-read full skill files during the build phase. Update it after each batch with new node IDs and any corrections.
 
 ---
 

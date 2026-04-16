@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.0.9"
+version: "5.1.0"
 ---
 
 # Figma Capture — Frame Generation
@@ -43,6 +43,28 @@ The remote Figma MCP server (`mcp.figma.com/mcp`) is the default connection meth
 | **Codex** | Run `codex mcp add figma --url https://mcp.figma.com/mcp` and authenticate |
 
 **Verification:** At session start, confirm the MCP server is connected and the `/figma-use` skill is available before proceeding.
+
+### MCP Tool Prefix Discovery (Important)
+
+MCP tool names include an environment-specific prefix that varies between setups. The tools in this file are referenced by their short names (e.g., `use_figma`, `search_design_system`), but the actual callable tool names may be:
+
+- `mcp__Figma__use_figma` (named server)
+- `mcp__b5bd554a-41eb-427b-92a4-cf0ef30f3d20__use_figma` (UUID-based server)
+- Or any other prefix depending on the MCP configuration
+
+**Rule:** Never hardcode a tool prefix. At session start, discover the correct prefix by searching deferred tools for `use_figma`. The prefix found applies to all Figma MCP tools in the session. Store this prefix and reuse it for all subsequent tool calls.
+
+**Discovery pattern:**
+```
+1. Search available tools for "use_figma"
+2. The result reveals the full tool name (e.g., mcp__Figma__use_figma)
+3. Extract the prefix (e.g., mcp__Figma__)
+4. All other Figma tools use the same prefix:
+   - {prefix}search_design_system
+   - {prefix}get_design_context
+   - {prefix}get_variable_defs
+   - etc.
+```
 
 ---
 
@@ -176,6 +198,11 @@ These are from Figma's official docs — violating any of them causes silent fai
 - Use 0–1 range, not 0–255: `{ r: 0.91, g: 0.08, b: 0.17 }` for `#E9142B`
 - Paint objects use `{ r, g, b }` only — no `a` field. Opacity goes at paint level: `{ type: 'SOLID', color: {r, g, b}, opacity: 0.5 }`
 - Fills and strokes are read-only arrays — clone, modify, reassign. Never mutate in place.
+
+**Effects/Shadows:**
+- `DROP_SHADOW` and `INNER_SHADOW` REQUIRE `blendMode: 'NORMAL'` — omitting it causes the entire script to fail
+- Full shadow format: `{ type: 'DROP_SHADOW', blendMode: 'NORMAL', color: { r, g, b, a }, offset: { x, y }, radius: N, spread: N, visible: true }`
+- Effects arrays are also read-only — clone, modify, reassign like fills/strokes
 
 **Layout sizing (critical for collapsed frames):**
 - `layoutSizingHorizontal/Vertical = 'FILL'` must be set AFTER `parent.appendChild(child)` — setting before throws
@@ -357,11 +384,81 @@ All text from the parsed brief or blueprint is placed in the frame using actual 
 
 | Asset Type | Frame Treatment |
 |---|---|
-| Available (from brief attachments) | Placed directly via `use_figma` |
+| Available (from brief attachments or URL) | Placed via `use_figma` with `setImageFill` (see below) |
 | Referenced but not provided | Gray placeholder rectangle with label and TODO note |
-| Icons (not provided) | Placeholder circle or square with icon description label |
+| Icons (from DS library) | Import via `search_design_system("icon {name}")` → instantiate |
+| Icons (not in DS) | Placeholder circle or square with icon description label |
 
-**Note:** Image support in `use_figma` is expanding. If image placement fails, flag it for manual placement and continue with placeholder rectangles.
+#### Asset Pipeline
+
+**Placing images via `use_figma`:**
+
+Images in Figma are applied as fills on frames/rectangles, not as standalone image nodes:
+
+```javascript
+// Create a rectangle to hold the image
+const imageFrame = figma.createRectangle();
+imageFrame.name = "Image: Hero Screenshot";
+imageFrame.resize(720, 450);
+imageFrame.cornerRadius = {RADIUS_MD};
+
+// Set image fill from URL (if supported by current API version)
+// Method 1: Image hash from existing image in file
+const imageHash = figma.createImage(imageBytes).hash;
+imageFrame.fills = [{
+  type: 'IMAGE',
+  scaleMode: 'FILL',
+  imageHash: imageHash
+}];
+
+// Method 2: If image bytes aren't available, use placeholder
+imageFrame.fills = [{ type: 'SOLID', color: { r: 0.92, g: 0.92, b: 0.95 } }];
+```
+
+**Image sourcing strategy (by priority):**
+
+| Source | When to Use | How |
+|---|---|---|
+| Brief attachments | User provided image files | Place directly via `use_figma` image fill |
+| DS icon components | Icons that match the design system | `search_design_system("icon arrow")` → import |
+| Reference site screenshots | User provided a reference URL | Take screenshot of specific sections for visual reference only — do not use as final assets |
+| Placeholder frames | No assets available | Gray rectangle with descriptive label (see below) |
+
+**Placeholder format (when no asset is available):**
+
+```javascript
+const placeholder = figma.createFrame();
+placeholder.name = "Image: {DESCRIPTIVE_LABEL}";
+placeholder.resize({WIDTH}, {HEIGHT});
+placeholder.cornerRadius = {RADIUS_MD};
+placeholder.fills = [{ type: 'SOLID', color: { r: 0.92, g: 0.92, b: 0.95 } }];
+
+// Add label text inside
+const label = figma.createText();
+label.fontName = { family: "{B_FONT}", style: "Regular" };
+label.characters = "[IMAGE: {description}]";
+label.fontSize = 12;
+label.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
+label.textAlignHorizontal = "CENTER";
+label.textAutoResize = "WIDTH_AND_HEIGHT";
+
+placeholder.layoutMode = "VERTICAL";
+placeholder.primaryAxisAlignItems = "CENTER";
+placeholder.counterAxisAlignItems = "CENTER";
+placeholder.appendChild(label);
+```
+
+**Standard placeholder sizes:**
+
+| Asset Type | Width | Height | Shape |
+|---|---|---|---|
+| Hero screenshot | 720px | 450px | Rounded rectangle |
+| Feature icon | 48px | 48px | Circle or rounded square |
+| Company logo | 120px | 40px | Rounded rectangle |
+| Testimonial avatar | 48px | 48px | Circle (`cornerRadius: 9999`) |
+| Product screenshot (in feature row) | 560px | 350px | Rounded rectangle |
+
+**Rule:** Always flag placeholder assets in the post-generation report so the user knows what needs manual replacement. Include the placeholder label text in the Build Card (Section 3 of execution-prompts).
 
 ### 5.3 — Design Tokens
 
@@ -397,6 +494,31 @@ Before creating any element, the agent should check for existing design system c
 | `search_design_system("button")` — reuse a button component | `search_design_system("colors")` — tokens already collected |
 | `search_design_system("card")` — reuse a card component | `search_design_system("typography")` — tokens already collected |
 | `search_design_system("navigation")` — reuse a nav component | `get_variable_defs` for token values — tokens already collected |
+
+### 6.5 — Component Import Decision Matrix
+
+When `search_design_system` finds a matching component, decide whether to import it or build from primitives using this matrix:
+
+| Condition | Action | Rationale |
+|---|---|---|
+| DS component has ≤3 variant properties AND simple structure (button, badge, tag) | **Import it** via `importComponentByKeyAsync` | Low risk, saves time, stays in sync with DS |
+| DS component has many variant properties OR deeply nested auto-layout (complex card, nav bar, hero) | **Build from primitives** with matching tokens | Import + property configuration costs more time than building, and failures eat batch budget |
+| DS component is an icon or small atomic element | **Import it** | Icons are hard to recreate; import is fast |
+| DS component key was found but instantiation fails on first attempt | **Build from primitives** immediately | Don't spend a second attempt — move on |
+
+**Which components are worth importing vs building:**
+
+| Worth Importing | Build from Primitives |
+|---|---|
+| Buttons (Primary, Secondary, Tertiary) | Section layouts (Hero, Feature Grid, CTA) |
+| Icon components | Cards (feature cards, testimonial cards) |
+| Input fields | Tab panels, accordions |
+| Badges, tags, chips | Logo bars, stat bands |
+| Avatar components | Any multi-section container |
+
+**Budget rule:** Spend at most 1 `use_figma` call on component search + instantiation across the entire session. If it works, great. If not, build everything from primitives using `figma-code-patterns.md` and `layout-code-templates.md` — this path is predictable and always succeeds.
+
+→ For component instantiation code: see `figma-code-patterns.md` Section 9
 
 ---
 
