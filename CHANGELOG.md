@@ -6,6 +6,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.3.0] — 2026-04-16
+
+### Added
+
+- **`figma-code-patterns.md` — §12 Programmatic Verification Script** — Single `use_figma` call checking 5 failure modes: section min-heights, grid sizing = AUTO, button height ≤ 60px, FILL inside auto-layout, text overflow (WIDTH_AND_HEIGHT). Moved from figma-frame-builder/SKILL.md to consolidate all code snippets.
+- **`design-tokens/token-sources.md` — Source 3b (Direct CSS File)** — When user provides CSS file directly, skip all fetch steps. If minified, apply expansion protocol. Proceed to Track A/B extraction.
+- **`design-tokens/token-sources.md` — Font Fallback Lookup Table** (§9) — Maps font characteristics to Google Font fallbacks: geometric sans → Inter/Lato/Poppins, humanist sans → Open Sans/Source Sans Pro, neo-grotesque → Roboto/Inter, serif → Merriweather/Playfair, slab → Roboto Slab, monospace → JetBrains Mono/Fira Code, display → Inter/Poppins.
+- **`design-tokens/token-values.md` — P1/P2/P3 Priority Column** — Every token now has a priority level: P1 (15 tokens, must extract), P2 (30 tokens, extract if available), P3 (53 tokens, use defaults). Focuses extraction on the tokens that actually affect build quality.
+
+### Changed
+
+- **`figma-frame-builder/SKILL.md` — 74% compression** (887 → 234 lines) — Removed all verbose prose. Kept all rules as terse statements, tables, and code-pattern references. Removed duplicated code snippets (now only in figma-code-patterns.md). Removed Section 10 (Custom Skill Packaging — never used).
+- **`execution-prompts/SKILL.md` — 50% compression** (521 → 260 lines) — Slim Build Card template (from ~60 to ~30 lines based on builder feedback that only page name, frame ID, fonts, CTA color were used). Compressed "What the Agent Does" sections. Trimmed Blueprint format. Version bumped to 5.3.0.
+- **`brief-parser/SKILL.md` — 46% compression** (424 → 230 lines) — Collapsed extended section type tables into compact grouped format. Terse rules replace prose explanations. Version bumped to 5.3.0.
+- **`design-tokens/token-sources.md` — 39% compression** (803 → 490 lines) — Source 6 (Screenshot) now references Source 3 Track A logic instead of duplicating it. Hybrid Resolution and Gap Handling tables compressed. All prose explanations replaced with terse rules.
+- **`design-tokens/token-values.md` — 25% compression** (348 → 260 lines) — Removed verbose "Placeholder In" column (replaced by priority). Added Priority Summary table.
+- **`README.md`** — Updated to v5.3, "What's New" section rewritten for compression release.
+- **`SECURITY.md`** — Version table updated: 5.3.x and 5.0–5.2 supported, 4.0.x dropped. Fixed stale reference to `design_system_prompt.md`.
+
+### Why
+
+Three iterative tests (v5.1→v5.2→v5.2.1) all scored 7/10. In the third test, 4 of 7 feedback items were things already documented — the builder absorbed structure but lost specific rules from long files. More documentation hit a "docs ceiling." Compression addresses signal-to-noise ratio: same information in fewer lines means the builder retains more of what matters.
+
+---
+
 ## [5.2.1] — 2026-04-16
 
 ### Added

@@ -9,9 +9,10 @@ Website Builder Skills is a collection of markdown instruction files for AI agen
 
 | Version | Supported |
 | ------- | --------- |
-| 4.0.x   | Yes       |
-| 3.0     | No        |
-| < 3.0   | No        |
+| 5.3.x   | Yes       |
+| 5.0–5.2 | Yes       |
+| 4.0.x   | No        |
+| < 4.0   | No        |
 
 
 ## Reporting a Vulnerability
@@ -26,7 +27,7 @@ We will acknowledge receipt within 72 hours and aim to provide a fix or mitigati
 
 ## Best Practices for Users
 
-- Review `design_system_prompt.md` token values before deploying generated code to production.
+- Review `design-tokens/token-values.md` token values before deploying generated code to production.
 - Do not commit API keys, secrets, or `.env` files to forks of this repository.
 - Keep your Figma MCP plugin and AI agent tooling up to date.
 

@@ -508,17 +508,9 @@ return { textNodes: textMap };
 - If it's a nested text layer, use direct `characters` assignment as shown above
 - Always `loadFontAsync()` before changing characters — even on instances
 
-### 9.6 — Fallback Strategy
+### 9.6 — Fallback
 
-Component instantiation with complex design systems (like UEMS Design System 3.0) is non-trivial. Follow this escalation:
-
-| Attempt | Action | Time Budget |
-|---|---|---|
-| 1 | Search library → import → instantiate → set properties | 1 `use_figma` call |
-| 2 | If properties fail, inspect instance structure → try direct child overrides | 1 `use_figma` call |
-| 3 (fallback) | Abandon component reuse → build from scratch using Sections 4–7 | Continue with raw frames |
-
-**Rule:** Do not spend more than 2 `use_figma` calls trying to get a component instance working. Raw frame construction is predictable and always works.
+Max 2 `use_figma` calls on component instantiation. If it doesn't work, build from primitives (Sections 4–7). Raw frame construction always works.
 
 ---
 
@@ -952,3 +944,115 @@ function mkGrid(parent, columns, options = {}) {
 // Calculate card width based on grid columns
 const cardWidth = (grid.width - SPACING.gridGutter * (grid._columns - 1)) / grid._columns;
 ```
+
+---
+
+## 12 — Programmatic Verification Script
+
+**Run as a single `use_figma` call after all sections are built (Phase A of self-healing).** Checks the 5 most common failure modes. Fix all issues before taking a visual screenshot (Phase B).
+
+```javascript
+// === Frame-Finder Preamble ===
+const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
+if (!targetPage) return { error: "Page '{PAGE_NAME}' not found" };
+await figma.setCurrentPageAsync(targetPage);
+const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
+if (!mainFrame) return { error: "Main frame not found" };
+// === End Preamble ===
+
+const MIN_HEIGHTS = {
+  Hero: 500, "Feature Grid": 300, "Feature Row": 300,
+  CTA: 250, Pricing: 250, FAQ: 200, Footer: 150
+};
+const issues = [];
+
+function checkNode(node, path) {
+  if (!node || !node.children) return;
+  const fullPath = path + " > " + (node.name || node.type);
+
+  // Check 1: Section min-height
+  if (node.name && node.name.startsWith("Section:")) {
+    const sectionType = node.name.replace("Section: ", "").split(" ")[0];
+    const minH = MIN_HEIGHTS[sectionType] || 200;
+    if (node.height < minH) {
+      issues.push({
+        check: "MIN_HEIGHT", nodeId: node.id, name: node.name,
+        actual: Math.round(node.height), expected: minH,
+        fix: "primaryAxisSizingMode → AUTO, minHeight → " + minH
+      });
+    }
+  }
+
+  // Check 2: Grid/card sizing must be AUTO
+  if (node.name && (node.name.startsWith("Feature Grid") || node.name.startsWith("Grid"))) {
+    if (node.primaryAxisSizingMode !== "FIXED") {
+      // Grids should be FIXED width (horizontal), AUTO height (counter)
+    }
+    if (node.counterAxisSizingMode !== "AUTO") {
+      issues.push({
+        check: "GRID_SIZING", nodeId: node.id, name: node.name,
+        actual: node.counterAxisSizingMode, expected: "AUTO",
+        fix: "counterAxisSizingMode → AUTO"
+      });
+    }
+  }
+
+  // Check 3: Buttons shouldn't exceed 60px height
+  if (node.name && node.name.startsWith("Button:")) {
+    if (node.height > 60) {
+      issues.push({
+        check: "BUTTON_HEIGHT", nodeId: node.id, name: node.name,
+        actual: Math.round(node.height), expected: "≤60",
+        fix: "Check padding and font size"
+      });
+    }
+  }
+
+  // Check 4: FILL sizing only inside auto-layout parent
+  if (node.layoutSizingHorizontal === "FILL" || node.layoutSizingVertical === "FILL") {
+    const parent = node.parent;
+    if (parent && parent.layoutMode === "NONE") {
+      issues.push({
+        check: "FILL_NO_AUTOLAYOUT", nodeId: node.id, name: node.name,
+        fix: "Parent has no layoutMode — FILL is ignored. Set parent.layoutMode or use FIXED sizing."
+      });
+    }
+  }
+
+  // Check 5: Text overflow — WIDTH_AND_HEIGHT inside fixed-width parent
+  if (node.type === "TEXT" && node.textAutoResize === "WIDTH_AND_HEIGHT") {
+    const parent = node.parent;
+    if (parent && parent.layoutMode !== "NONE") {
+      issues.push({
+        check: "TEXT_OVERFLOW", nodeId: node.id, name: node.name,
+        actual: "WIDTH_AND_HEIGHT", expected: "HEIGHT",
+        fix: "textAutoResize → HEIGHT, then layoutSizingHorizontal → FILL"
+      });
+    }
+  }
+
+  // Recurse
+  if (node.children) {
+    for (const child of node.children) checkNode(child, fullPath);
+  }
+}
+
+checkNode(mainFrame, "");
+
+const sectionCount = mainFrame.children.filter(
+  c => c.name && c.name.startsWith("Section:")
+).length;
+
+return {
+  pass: issues.length === 0,
+  sectionCount,
+  issueCount: issues.length,
+  issues,
+  summary: issues.length === 0
+    ? `✓ All checks passed (${sectionCount} sections)`
+    : `✗ ${issues.length} issue(s) found:\n` +
+      issues.map(i => `  [${i.check}] ${i.name} — ${i.fix}`).join('\n')
+};
+```
+
+**Max 3 iterations:** Fix Phase A issues → re-run script → if clean, take screenshot (Phase B). If Phase B reveals visual issues, fix and re-run both phases. Stop after 3 total iterations regardless.

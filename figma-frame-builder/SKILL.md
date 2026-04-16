@@ -1,887 +1,234 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.2.1"
+version: "5.3.0"
 ---
 
 # Figma Capture — Frame Generation
 
-This file governs how the agent creates Figma design frames from design specs (parsed brief, selected layout, mapped components, applied tokens). It is used exclusively in Mode A (Brief → Figma) and in the C → A escalation path (Blueprint → Figma).
-
-→ For the reverse direction (reading from Figma): see `figma-code-extractor`
-→ For component specs being placed in frames: see `component-library`
-→ For token values applied to frame elements: see `design-tokens`
-→ For section sequencing in the frame: see `layout-patterns`
-→ For Plugin API code snippets: see `figma-frame-builder/figma-code-patterns.md`
-→ For layout-specific Figma code: see `figma-frame-builder/layout-code-templates.md`
+→ Code snippets: `figma-code-patterns.md` | Layout templates: `layout-code-templates.md`
+→ Component specs: `component-library` | Token values: `design-tokens` | Section order: `layout-patterns`
 
 ---
 
 ## 1 — Prerequisites
 
-Before generating a Figma frame, the agent must have:
-
-| Input | Source | Required |
-|---|---|---|
-| Parsed brief or Page Blueprint | `brief-parser` parsing output or `{product}-blueprint.md` | Yes |
-| Selected layout pattern | `layout-patterns` selection logic | Yes |
-| Component mapping | `component-library` section-to-component table | Yes |
-| Design tokens | `design-tokens` (with optional trend overrides) | Yes |
-| Target Figma file and page | User-specified in prompt | Yes |
-| Product class prefix | User-specified in prompt | Yes |
-| Remote MCP server connected | `mcp.figma.com/mcp` authenticated | Yes |
-| `/figma-use` skill installed | Foundational skill for canvas writes | Yes |
-
-### MCP Server Setup
-
-The remote Figma MCP server (`mcp.figma.com/mcp`) is the default connection method. No local bridge is required.
-
-| Agent | Setup |
+| Input | Source |
 |---|---|
-| **Claude Code** | Install the Figma plugin: includes MCP server config + skills automatically |
-| **Cursor AI** | Install the Figma plugin via agent chat, or add MCP server manually in Settings → MCP |
-| **Codex** | Run `codex mcp add figma --url https://mcp.figma.com/mcp` and authenticate |
+| Parsed brief or Page Blueprint | `brief-parser` or `{product}-blueprint.md` |
+| Layout pattern + component mapping | `layout-patterns` + `component-library` |
+| Design tokens | `design-tokens` |
+| Target Figma file URL | User prompt |
+| Remote MCP server + `/figma-use` skill | `mcp.figma.com/mcp` |
 
-**Verification:** At session start, confirm the MCP server is connected and the `/figma-use` skill is available before proceeding.
+### MCP Tool Prefix Discovery
 
-### MCP Tool Prefix Discovery (Important)
+Tool names have environment-specific prefixes (e.g., `mcp__Figma__use_figma` or `mcp__b5bd554a-...`). **At session start, search deferred tools for `use_figma` to discover the prefix.** All Figma tools share the same prefix.
 
-MCP tool names include an environment-specific prefix that varies between setups. The tools in this file are referenced by their short names (e.g., `use_figma`, `search_design_system`), but the actual callable tool names may be:
+### Screenshot Tools (try in order)
 
-- `mcp__Figma__use_figma` (named server)
-- `mcp__b5bd554a-41eb-427b-92a4-cf0ef30f3d20__use_figma` (UUID-based server)
-- Or any other prefix depending on the MCP configuration
-
-**Rule:** Never hardcode a tool prefix. At session start, discover the correct prefix by searching deferred tools for `use_figma`. The prefix found applies to all Figma MCP tools in the session. Store this prefix and reuse it for all subsequent tool calls.
-
-**Discovery pattern:**
-```
-1. Search available tools for "use_figma"
-2. The result reveals the full tool name (e.g., mcp__Figma__use_figma)
-3. Extract the prefix (e.g., mcp__Figma__)
-4. All other Figma tools use the same prefix:
-   - {prefix}search_design_system
-   - {prefix}get_design_context
-   - {prefix}get_variable_defs
-   - etc.
-```
+1. `{prefix}get_screenshot` — MCP remote, always available
+2. `figma_take_screenshot` — Desktop Bridge, may not be connected
+3. Manual — ask user to screenshot and attach
 
 ---
 
-## 2 — Figma MCP Tool Selection
+## 2 — Figma MCP Runtime Rules
 
-The new Figma MCP server consolidates write operations into a single unified tool. Use targeted tools only for specific read tasks.
+**Every `use_figma` call runs in a fresh plugin context.** Nodes from prior calls are invisible unless found by stored ID.
 
-### Primary Write Tool
+### Context Reset Table
 
-| Tool | Purpose | Notes |
-|---|---|---|
-| `use_figma` | **All write operations** — create, edit, delete, and inspect pages, frames, components, variants, variables, styles, text, and images | Always invoke the `/figma-use` skill before calling. Auto-searches connected design libraries for existing components before creating new ones. |
-
-### Read & Search Tools
-
-| Tool | Purpose | Notes |
-|---|---|---|
-| `search_design_system` | Find existing components, variables, and styles across connected libraries | Use before creating anything — reuse existing assets first |
-| `get_design_context` | Get structured representation of a frame or selection | Returns layout, spacing, colors, typography in one call |
-| `get_variable_defs` | Extract variables and styles used in a selection | For reading token values from existing frames |
-
-### Code-to-Canvas Tool
-
-| Tool | Purpose | Notes |
-|---|---|---|
-| `generate_figma_design` | Push live HTML into Figma as editable design layers | Used in C → Figma escalation path as an alternative to building frames from scratch |
-
-### Skills
-
-| Skill | Purpose | Required |
-|---|---|---|
-| `/figma-use` | Foundational skill — teaches the agent Plugin API rules, gotchas, and script templates | **Required before every `use_figma` call** |
-| Custom skills | Your team's conventions packaged as installable skills | Optional — enhances consistency |
-
-**Rule:** Always pass `skillNames` when calling `use_figma` for logging and workflow tracking.
-
-### Screenshot Tool Fallback Chain
-
-Different environments have different screenshot tools available. Try in this order:
-
-| Priority | Tool | Availability | Notes |
-|---|---|---|---|
-| 1 | `{prefix}get_screenshot` | MCP remote server — always available when MCP is connected | Pass `nodeId` and `fileKey`. Recommended default. |
-| 2 | `figma_take_screenshot` (Desktop Bridge) | Only when Figma Desktop Bridge plugin is connected | May not be available in all setups |
-| 3 | Manual screenshot | Always | Ask the user to take a screenshot and attach it |
-
-**Rule:** Don't assume the Desktop Bridge is available. Start with the MCP remote `get_screenshot` tool (using the discovered prefix from Section 1). Only fall back to Desktop Bridge if MCP remote fails, and to manual if both fail.
-
----
-
-## 3 — Figma MCP Runtime Rules (Critical)
-
-This section addresses the single biggest time sink in frame generation: **the Plugin API context resets between `use_figma` calls**. Every rule here is derived from Figma's official `figma-use` skill documentation and confirmed by production testing.
-
-→ Official reference: `https://github.com/figma/mcp-server-guide/blob/main/skills/figma-use/SKILL.md`
-
-### 3.1 — Context Reset Behavior
-
-**Every `use_figma` call runs in a fresh plugin context.** The frame created in Call 1 is invisible to Call 2 unless explicitly re-discovered. This is by design — not a bug.
-
-| Behavior | Implication |
+| Behavior | Rule |
 |---|---|
-| `figma.currentPage` resets to the first page on each call | Must call `setCurrentPageAsync` at the start of every call if targeting a non-default page |
-| `figma.getNodeById(id)` works — but only after page is loaded | Must `setCurrentPageAsync` before accessing any node by ID |
-| `page.children` may not be populated | Only populated after `setCurrentPageAsync` completes |
-| `getPluginData()` / `setPluginData()` are NOT supported | Cannot persist data between calls via plugin data — use returned node IDs instead |
-| `console.log()` output is NOT returned to the agent | Use `return` for all output — never rely on console |
-| `figma.notify()` throws "not implemented" | Never use — use `return` for status messages |
-| `figma.closePlugin()` must never be called | Code is auto-wrapped — calling it will error |
-| Code must NOT be wrapped in async IIFE | Already auto-wrapped — wrapping again causes errors |
-| `figma.loadAllPagesAsync()` is NOT available | Not a real API method — pages load on demand via `setCurrentPageAsync` |
-| `figma.createPage()` may not be available | Use `figma.root.children` to find existing pages instead of creating new ones |
+| `figma.currentPage` resets each call | `await figma.setCurrentPageAsync(page)` at top of every call |
+| Nodes from prior calls invisible | `figma.getNodeById(storedId)` after page load |
+| `getPluginData`/`setPluginData` unsupported | Return node IDs — only cross-call persistence |
+| `console.log` output not returned | Use `return` for all output |
+| `figma.notify()`, `figma.closePlugin()` | Not available — never call |
+| `loadAllPagesAsync()` | Not a real method — use `setCurrentPageAsync` |
+| Async IIFE wrapping | Already auto-wrapped — don't double-wrap |
 
-### 3.2 — Node ID Persistence (Mandatory)
+### Node ID Persistence (Mandatory)
 
-**Every `use_figma` call MUST return all created and mutated node IDs.** This is the only reliable way to reference nodes across calls.
-
-**Return format (required at the end of every script):**
+Every `use_figma` call MUST end with:
 ```javascript
-return {
-  createdNodeIds: [mainFrame.id, heroSection.id, featureSection.id],
-  mutatedNodeIds: [],
-  summary: "Created main frame + 2 sections"
-};
+return { createdNodeIds: [...], mutatedNodeIds: [], summary: "..." };
 ```
+Store returned IDs between calls. Never find nodes by name — use stored IDs only.
 
-**Rules:**
-- Store every returned ID between calls — these are the only reliable handles
-- Pass stored IDs as string literals into subsequent `use_figma` calls
-- Never assume a node can be found by name — name searches are unreliable across context resets
-- If a `detachInstance()` call changes IDs, re-discover from a stable parent frame
+### Batching
 
-### 3.3 — Frame-Finder Preamble
+~50K char limit per call. Target 2–3 sections per batch.
 
-**Paste this pattern at the TOP of every `use_figma` call after the first one.** It navigates to the correct page and locates the main frame by its stored ID.
-
-```javascript
-// === Frame-Finder Preamble (required for all calls after initial creation) ===
-const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
-if (!targetPage) return { error: "Page '{PAGE_NAME}' not found" };
-await figma.setCurrentPageAsync(targetPage);
-
-const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
-if (!mainFrame) return { error: "Main frame not found — ID may have changed" };
-// === End Preamble — mainFrame is now available ===
-```
-
-Replace `{PAGE_NAME}` with the target Figma page name and `{MAIN_FRAME_ID}` with the ID returned from the first call.
-
-### 3.4 — Batching Strategy
-
-With a ~50K character limit per `use_figma` call, a full landing page (8–12 sections) cannot be built in one call. Split into batches:
-
-**Batch plan for a typical 10-section page:**
-
-| Batch | Sections | Why This Grouping |
+| Section Count | Build Batches | Total Calls (incl. verify) |
 |---|---|---|
-| Batch 1 | Main frame + Hero + Trust Signals | Foundational — establishes the frame, returns the main frame ID used by all subsequent batches |
-| Batch 2 | Value Proposition + Feature Grid | Content-heavy sections with multiple child components |
-| Batch 3 | Feature Deep-Dive + Testimonials | Alternating layout patterns |
-| Batch 4 | Integration Grid + Metrics Bar + FAQ | Simpler sections, can fit more per call |
-| Batch 5 | Closing CTA + final adjustments | Last section + any spacing/color fixes |
+| 6–8 | 3–4 | 5–6 |
+| 9–12 | 4–5 | 7–8 |
 
-**Rules:**
-- Batch 1 is always the main frame creation — its returned ID is used by every subsequent batch
-- Every batch starts with the Frame-Finder Preamble (Section 3.3)
-- Every batch ends with `return { createdNodeIds: [...], mutatedNodeIds: [...] }`
-- Target 2–3 sections per batch (adjust based on component complexity)
-- If a batch fails, the frame is atomic — no partial nodes are created. Retry the same batch.
-- Between batches, verify the previous batch's nodes exist before proceeding
+Rules: Batch 1 creates the main frame (returns ID for all subsequent batches). Every batch starts with the Frame-Finder Preamble (`figma-code-patterns.md` §1b). Every batch uses the Standard Batch Preamble helpers (`figma-code-patterns.md`).
 
-**Estimated call budget:**
+### Plugin API Gotchas
 
-| Section Count | Estimated Batches | Total `use_figma` Calls (incl. verification) |
-|---|---|---|
-| 6–8 sections | 3–4 build + 1–2 verify | 5–6 calls |
-| 9–12 sections | 4–5 build + 2–3 verify | 7–8 calls |
-| 12+ sections | 5–6 build + 2–3 verify | 8–10 calls |
+**Colors:** 0–1 range (`{ r: 0.91, g: 0.08, b: 0.17 }`). No `a` in color — opacity at paint level. Fills/strokes/effects are read-only arrays: clone → modify → reassign.
 
-### 3.5 — Plugin API Gotchas Quick Reference
+**Shadows:** `blendMode: 'NORMAL'` REQUIRED on DROP_SHADOW/INNER_SHADOW — omitting crashes the script.
 
-These are from Figma's official docs — violating any of them causes silent failures or errors.
+**Layout sizing (critical):**
+- `primaryAxisSizingMode` defaults to `FIXED` (100px) — **always set explicitly to `'AUTO'`**
+- `layoutSizingHorizontal = 'FILL'` fails silently if node isn't inside auto-layout yet
+- `resize()` resets sizing modes to FIXED — call it BEFORE setting modes
+- **Order:** create → `resize()` → `layoutMode` → `primaryAxisSizingMode = 'AUTO'` → `appendChild()` → child `layoutSizingHorizontal = 'FILL'`
 
-**Colors:**
-- Use 0–1 range, not 0–255: `{ r: 0.91, g: 0.08, b: 0.17 }` for `#E9142B`
-- Paint objects use `{ r, g, b }` only — no `a` field. Opacity goes at paint level: `{ type: 'SOLID', color: {r, g, b}, opacity: 0.5 }`
-- Fills and strokes are read-only arrays — clone, modify, reassign. Never mutate in place.
+**Text:** `loadFontAsync` before any text change. `textAutoResize = 'HEIGHT'` + `layoutSizingHorizontal = 'FILL'` after appending (default `WIDTH_AND_HEIGHT` overflows).
 
-**Effects/Shadows:**
-- `DROP_SHADOW` and `INNER_SHADOW` REQUIRE `blendMode: 'NORMAL'` — omitting it causes the entire script to fail
-- Full shadow format: `{ type: 'DROP_SHADOW', blendMode: 'NORMAL', color: { r, g, b, a }, offset: { x, y }, radius: N, spread: N, visible: true }`
-- Effects arrays are also read-only — clone, modify, reassign like fills/strokes
+**Positioning:** New top-level nodes at (0,0) — offset right of existing content.
 
-**Layout sizing (critical for collapsed frames):**
-- **`layoutSizingVertical` defaults to `'FIXED'` (100px) on new frames** — this is the #1 cause of collapsed grids and broken buttons. After creating ANY frame with `layoutMode`, explicitly set `primaryAxisSizingMode = 'AUTO'` (hug) or `layoutSizingVertical = 'HUG'` unless you intend a fixed height. Never rely on the default.
-- `layoutSizingHorizontal/Vertical = 'FILL'` must be set AFTER `parent.appendChild(child)` — setting before the node has an auto-layout parent throws a silent error and the value stays `'FIXED'`
-- `resize()` must be called BEFORE setting sizing modes — `resize()` resets them to `FIXED`
-- Correct order: create node → `resize()` → `layoutMode` → `primaryAxisSizingMode = 'AUTO'` → `appendChild()` → child `layoutSizingHorizontal = 'FILL'`
-- **For text nodes inside auto-layout:** Set `textAutoResize = 'HEIGHT'` + `layoutSizingHorizontal = 'FILL'` AFTER appending to parent — this makes text wrap to parent width and grow vertically. The default `textAutoResize = 'WIDTH_AND_HEIGHT'` causes text to overflow horizontally.
-
-**Text:**
-- `await figma.loadFontAsync({ family, style })` BEFORE any text property change — never skip, never fire-and-forget
-- `lineHeight` and `letterSpacing` use `{ unit: 'PIXELS', value: N }` format, not bare numbers
-- Use `await figma.listAvailableFontsAsync()` to check font availability before loading
-
-**Positioning:**
-- New top-level nodes default to (0,0) — position them to the right of existing content
-- Nested nodes are positioned by their parent's auto-layout — don't manually position them
-
-**Variables:**
-- Always set `variable.scopes` explicitly — default `ALL_SCOPES` pollutes every property picker
-- Use specific scopes: `["FRAME_FILL", "SHAPE_FILL"]` for backgrounds, `["TEXT_FILL"]` for text
-
-**Error handling:**
-- On `use_figma` error, stop immediately — failed scripts are atomic (no partial execution)
-- Every async call must be `await`ed — unawaited calls cause silent failures
-
-→ For the complete code patterns reference: see `figma-frame-builder/figma-code-patterns.md`
+→ Full error table: `figma-code-patterns.md` Common API Errors section
 
 ---
 
-## 4 — Frame Structure
+## 3 — Frame Structure
 
-### 3.1 — Top-Level Frame
-
-The agent creates one top-level frame per landing page on the specified Figma page.
+### Top-Level Frame
 
 | Property | Value |
 |---|---|
-| Frame name | `{Product Name} — Landing Page` |
-| Width | `1440px` (standard desktop canvas) |
-| Height | Auto (grows with content) |
-| Layout mode | Vertical auto-layout |
-| Padding | `0` (sections handle their own padding) |
-| Fill | `color-bg-page` from `design-tokens` |
+| Name | `{Product Name} — Landing Page` |
+| Width / Height | 1440px / Auto (grows) |
+| Layout | Vertical auto-layout, padding 0 |
+| Fill | `color-bg-page` |
 
-### 3.2 — Section Frames
-
-Each page section is a child frame within the top-level frame.
+### Section Frames
 
 | Property | Value |
 |---|---|
-| Frame name | `Section: {Section Type}` (e.g., `Section: Hero`, `Section: Feature Grid`) |
-| Width | Fill parent (100% of top-level frame) |
-| Height | Hug contents (with min-height — see below) |
-| Layout mode | Vertical auto-layout |
-| Padding top/bottom | `section-padding-y` from `design-tokens` |
-| Padding left/right | Calculated to center content at `content-max-width` |
-| Fill | Based on tinted section alternation rules from `layout-patterns` |
+| Name | `Section: {Type}` |
+| Width / Height | Fill parent / Hug + min-height |
+| Padding | `section-padding-y` top/bottom, side padding to center `content-max-width` |
+| Fill | Tinted section alternation from `layout-patterns` |
 
-**Collapsed Frame Prevention:** "Hug contents" alone can produce visually collapsed sections when child frames don't push enough height. Every section frame must have a `min-height` set:
+**Min-heights (collapse prevention):**
 
 | Section Type | Min-Height |
 |---|---|
-| Hero | `500px` |
-| Feature Grid / Feature Row | `300px` |
-| Testimonial / Logo Bar / Metrics Bar | `200px` |
-| CTA / Pricing | `250px` |
-| FAQ / Accordion | `200px` |
-| All other sections | `200px` |
+| Hero | 500px |
+| Feature Grid / Row | 300px |
+| CTA / Pricing | 250px |
+| All others | 200px |
 
-After creating a section, the agent must verify the rendered height exceeds min-height. If it doesn't, the section is collapsed and needs fixing (see Section 7, Step 6).
+### Component Frames
 
-### 3.3 — Component Frames
-
-Individual components within a section.
-
-| Property | Value |
+| Component | Min-Height |
 |---|---|
-| Frame name | `{Component Type}: {Content Label}` (e.g., `Feature Card: Network Monitoring`) |
-| Width | Based on grid column span |
-| Height | Hug contents (with min-height — see below) |
-| Layout mode | Vertical or horizontal auto-layout (based on component spec) |
-| Padding | `card-padding` from `design-tokens` (for card-type components) |
+| Feature Card | 150px |
+| Testimonial Card | 120px |
+| Pricing Card | 200px |
+| Tab Panel | 200px |
+| All others | 100px |
 
-**Collapsed Frame Prevention:** Card and component frames also collapse when inner text or image layers don't have explicit sizing. Every component frame must have a `min-height` set:
-
-| Component Type | Min-Height |
-|---|---|
-| Feature Card | `150px` |
-| Testimonial Card | `120px` |
-| Pricing Card | `200px` |
-| Tab Panel content area | `200px` |
-| All other card/component frames | `100px` |
-
-**Root cause fix:** When populating content inside a component frame, ensure every text layer has `textAutoResize: "HEIGHT"` (width fixed, height grows with content) and every image placeholder has an explicit height set. These two properties are the most common cause of collapsed frames.
-
-**Common collapse patterns and their fixes (from production testing):**
-
-| Pattern | Cause | Fix |
-|---|---|---|
-| Section shows 10–19px height | `primaryAxisSizingMode` set to `AUTO` before children appended | Set `primaryAxisSizingMode = 'AUTO'` AFTER all children are appended |
-| Card shows as thin strip | `resize()` called after sizing mode set | Call `resize()` BEFORE setting any sizing modes — `resize()` resets them to `FIXED` |
-| Text exists but section is blank | Text node has `textAutoResize: "NONE"` | Set `textAutoResize: "HEIGHT"` on every text node |
-| Image placeholder has 0 height | Image frame created with no explicit size | Always `resize()` image placeholders to explicit dimensions |
-| Frame collapses after `detachInstance()` | Instance detach changes node IDs | Re-discover nodes from stable parent, don't cache detached IDs |
-
-**Correct operation order (critical):**
-```
-1. Create frame → figma.createFrame()
-2. resize()     → frame.resize(width, height)     // BEFORE sizing modes
-3. Layout mode  → frame.layoutMode = "VERTICAL"
-4. Sizing       → frame.primaryAxisSizingMode = "AUTO"
-5. Min-height   → frame.minHeight = 200
-6. Add children → frame.appendChild(child)         // BEFORE FILL sizing
-7. FILL sizing  → child.layoutSizingHorizontal = "FILL"  // AFTER appendChild
-```
-
-→ For complete code patterns: see `figma-frame-builder/figma-code-patterns.md`
+**Collapse root causes:** Text with `textAutoResize: "NONE"` → set `"HEIGHT"`. Image with no size → `resize()`. Frame with `primaryAxisSizingMode: "FIXED"` → set `"AUTO"`. `resize()` after sizing mode → call `resize()` first.
 
 ---
 
-## 5 — Layer Naming Convention
+## 4 — Layer Naming
 
-Consistent layer names enable Mode B to parse the frame reliably when generating code later.
+Pattern: `{Type}: {Label}` — every layer must have a type prefix.
 
-### Naming Pattern
+| Prefix | Examples |
+|---|---|
+| `Section` | `Section: Hero`, `Section: Feature Grid` |
+| `Feature Card` | `Feature Card: Real-time Alerts` |
+| `Feature Grid/Row` | `Feature Grid: Core Features` |
+| `Tab Panel` | `Tab Panel: Advanced Features` |
+| `Testimonial` | `Testimonial: Jane Doe, Acme Corp` |
+| `Logo Bar` / `Metrics Bar` | `Logo Bar: Trusted By` |
+| `CTA` / `FAQ` / `Pricing` | `CTA: Closing` |
+| `Text` | `Text: H1`, `Text: Body` |
+| `Image` | `Image: Hero Screenshot` |
+| `Button` | `Button: Primary CTA` |
 
-```
-{Layer Type}: {Descriptive Label}
-```
-
-### Layer Types
-
-| Type Prefix | Used For | Examples |
-|---|---|---|
-| `Section` | Page-level sections | `Section: Hero`, `Section: Features`, `Section: Closing CTA` |
-| `Hero` | Hero variant | `Hero: Split Image`, `Hero: Full Bleed` |
-| `Feature Card` | Individual feature block | `Feature Card: Real-time Alerts` |
-| `Feature Grid` | Feature card container | `Feature Grid: Core Features` |
-| `Feature Row` | Alternating image-text row | `Feature Row: Dashboard Analytics` |
-| `Tab Panel` | Tabbed feature section | `Tab Panel: Advanced Features` |
-| `Testimonial` | Customer quote | `Testimonial: John Smith, Acme Corp` |
-| `Logo Bar` | Logo row | `Logo Bar: Trusted By` |
-| `Metrics Bar` | Statistics row | `Metrics Bar: Key Numbers` |
-| `CTA` | Call-to-action block | `CTA: Closing`, `CTA: Mid-page` |
-| `FAQ` | FAQ section | `FAQ: Common Questions` |
-| `Pricing` | Pricing section | `Pricing: Plans` |
-| `Text` | Text elements | `Text: H1`, `Text: Body`, `Text: Caption` |
-| `Image` | Image placeholders | `Image: Hero Screenshot`, `Image: Feature Icon` |
-| `Button` | CTA buttons | `Button: Primary`, `Button: Secondary` |
-| `Divider` | Section separators | `Divider: Line`, `Divider: Shaped` |
-
-### Rules
-- Every layer must have a type prefix — no unnamed or generic layers (e.g., no `Frame 47` or `Group 12`)
-- Text layers include their heading level: `Text: H1`, `Text: H2 — Section Title`, `Text: Body`
-- Image layers indicate content purpose: `Image: Hero Screenshot` not just `Image`
-- Button layers indicate hierarchy: `Button: Primary CTA`, `Button: Secondary CTA`
+Fabricated content: append `[placeholder]` — e.g., `Testimonial: Jane Doe [placeholder]`
 
 ---
 
-## 6 — Content Population
+## 5 — Content Population
 
-### 5.1 — Text Content
+### Text
 
-All text from the parsed brief or blueprint is placed in the frame using actual copy, not placeholder "Lorem ipsum" text.
+Use actual brief copy, not Lorem ipsum. Missing text → red `[MISSING: {what}]`. Missing image → red-bordered rect `[IMAGE NEEDED: {what}]`. Fabricated content → `{curly braces}` around text.
 
-| Element | Content Source |
-|---|---|
-| Hero H1 | `headline` from parsed brief hero section |
-| Hero subheadline | `subheadline` from parsed brief hero section |
-| CTA button labels | `primary_cta` and `secondary_cta` from parsed brief |
-| Feature headings | Feature `name` from parsed brief |
-| Feature descriptions | Feature `description` from parsed brief |
-| Testimonial quotes | `quote` + `attribution` from parsed brief |
-| Section headings | Generated from section type (e.g., "Why Choose {Product}") or from brief if provided |
+### Images and Assets
 
-**Rule:** If the brief has content gaps (flagged in parsing), place a visual indicator in the frame:
-- Missing text → Red placeholder text: `[MISSING: {description of what's needed}]`
-- Missing image → Red-bordered rectangle with label: `[IMAGE NEEDED: {description}]`
-
-### 5.2 — Images and Assets
-
-| Asset Type | Frame Treatment |
-|---|---|
-| Available (from brief attachments or URL) | Placed via `use_figma` with `setImageFill` (see below) |
-| Referenced but not provided | Gray placeholder rectangle with label and TODO note |
-| Icons (from DS library) | Import via `search_design_system("icon {name}")` → instantiate |
-| Icons (not in DS) | Placeholder circle or square with icon description label |
-
-#### Asset Pipeline
-
-**Placing images via `use_figma`:**
-
-Images in Figma are applied as fills on frames/rectangles, not as standalone image nodes:
-
-```javascript
-// Create a rectangle to hold the image
-const imageFrame = figma.createRectangle();
-imageFrame.name = "Image: Hero Screenshot";
-imageFrame.resize(720, 450);
-imageFrame.cornerRadius = {RADIUS_MD};
-
-// Set image fill from URL (if supported by current API version)
-// Method 1: Image hash from existing image in file
-const imageHash = figma.createImage(imageBytes).hash;
-imageFrame.fills = [{
-  type: 'IMAGE',
-  scaleMode: 'FILL',
-  imageHash: imageHash
-}];
-
-// Method 2: If image bytes aren't available, use placeholder
-imageFrame.fills = [{ type: 'SOLID', color: { r: 0.92, g: 0.92, b: 0.95 } }];
-```
-
-**Image sourcing strategy (by priority):**
-
-| Source | When to Use | How |
+| Source | Priority | Method |
 |---|---|---|
-| Brief attachments | User provided image files | Place directly via `use_figma` image fill |
-| DS icon components | Icons that match the design system | `search_design_system("icon arrow")` → import |
-| Reference site screenshots | User provided a reference URL | Take screenshot of specific sections for visual reference only — do not use as final assets |
-| Placeholder frames | No assets available | Gray rectangle with descriptive label (see below) |
+| Brief attachments | 1 | `use_figma` image fill |
+| DS icon components | 2 | `search_design_system("icon {name}")` → import |
+| Placeholder | 3 | Gray rect with label (see `figma-code-patterns.md`) |
 
-**Placeholder format (when no asset is available):**
+**Placeholder sizes:** Hero 720×450, Feature icon 48×48, Logo 120×40, Avatar 48×48 circle, Product screenshot 560×350.
 
-```javascript
-const placeholder = figma.createFrame();
-placeholder.name = "Image: {DESCRIPTIVE_LABEL}";
-placeholder.resize({WIDTH}, {HEIGHT});
-placeholder.cornerRadius = {RADIUS_MD};
-placeholder.fills = [{ type: 'SOLID', color: { r: 0.92, g: 0.92, b: 0.95 } }];
+### Design Tokens
 
-// Add label text inside
-const label = figma.createText();
-label.fontName = { family: "{B_FONT}", style: "Regular" };
-label.characters = "[IMAGE: {description}]";
-label.fontSize = 12;
-label.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
-label.textAlignHorizontal = "CENTER";
-label.textAutoResize = "WIDTH_AND_HEIGHT";
+Apply all values from `design-tokens`. CTA buttons use `color-cta` (not `color-primary`). If Trend Adaptation Brief is active, apply its overrides.
 
-placeholder.layoutMode = "VERTICAL";
-placeholder.primaryAxisAlignItems = "CENTER";
-placeholder.counterAxisAlignItems = "CENTER";
-placeholder.appendChild(label);
-```
+### Design System Reuse
 
-**Standard placeholder sizes:**
+Search for **structural components only** (buttons, icons) — max 3 `search_design_system` calls. Never search for token values.
 
-| Asset Type | Width | Height | Shape |
-|---|---|---|---|
-| Hero screenshot | 720px | 450px | Rounded rectangle |
-| Feature icon | 48px | 48px | Circle or rounded square |
-| Company logo | 120px | 40px | Rounded rectangle |
-| Testimonial avatar | 48px | 48px | Circle (`cornerRadius: 9999`) |
-| Product screenshot (in feature row) | 560px | 350px | Rounded rectangle |
-
-**Rule:** Always flag placeholder assets in the post-generation report so the user knows what needs manual replacement. Include the placeholder label text in the Build Card (Section 3 of execution-prompts).
-
-### 5.3 — Design Tokens
-
-All visual properties are applied using values from `design-tokens`:
-
-| Property | Token Applied |
+| Import | Build from Primitives |
 |---|---|
-| Text colors | `color-text-primary`, `color-text-secondary`, etc. |
-| Background fills | `color-bg-page`, tint surface colors |
-| Button colors | `color-cta`, `color-cta-hover`, `color-cta-active` |
-| Spacing | `section-padding-y`, `space-*` scale |
-| Typography | `font-heading`, `font-body`, size/weight/line-height tokens |
-| Shadows | `shadow-sm`, `shadow-md`, etc. |
-| Border radius | `radius-sm`, `radius-md`, etc. |
+| Buttons, icons, badges, input fields | Section layouts, cards, tab panels, logo bars |
 
-If a Trend Adaptation Brief is active, apply the token overrides from the trend brief instead of base values for any overridden tokens.
-
-### 5.4 — Design System Reuse
-
-Before creating any element, the agent should check for existing design system components — but only for **structural components** (buttons, cards, nav bars), not for token values.
-
-```
-1. Call search_design_system with the component type (e.g., "button", "card")
-   — Limit to ONE search call per component type, max 3 calls total per session
-2. If a matching library component exists → use it via use_figma (instantiate)
-3. Only create from scratch when no library match exists
-```
-
-**Restriction: Do NOT search Figma for design token values.** The agent already has all token values collected from `design-tokens/token-values.md` (via the token source selected at session start). Searching Figma for colors, fonts, spacing, or other token values wastes time and risks conflicting with the already-collected tokens. Apply tokens directly from the collected values — never from Figma variable lookups during frame generation.
-
-| Allowed | Not Allowed |
-|---|---|
-| `search_design_system("button")` — reuse a button component | `search_design_system("colors")` — tokens already collected |
-| `search_design_system("card")` — reuse a card component | `search_design_system("typography")` — tokens already collected |
-| `search_design_system("navigation")` — reuse a nav component | `get_variable_defs` for token values — tokens already collected |
-
-### 6.5 — Component Import Decision Matrix
-
-When `search_design_system` finds a matching component, decide whether to import it or build from primitives using this matrix:
-
-| Condition | Action | Rationale |
-|---|---|---|
-| DS component has ≤3 variant properties AND simple structure (button, badge, tag) | **Import it** via `importComponentByKeyAsync` | Low risk, saves time, stays in sync with DS |
-| DS component has many variant properties OR deeply nested auto-layout (complex card, nav bar, hero) | **Build from primitives** with matching tokens | Import + property configuration costs more time than building, and failures eat batch budget |
-| DS component is an icon or small atomic element | **Import it** | Icons are hard to recreate; import is fast |
-| DS component key was found but instantiation fails on first attempt | **Build from primitives** immediately | Don't spend a second attempt — move on |
-
-**Which components are worth importing vs building:**
-
-| Worth Importing | Build from Primitives |
-|---|---|
-| Buttons (Primary, Secondary, Tertiary) | Section layouts (Hero, Feature Grid, CTA) |
-| Icon components | Cards (feature cards, testimonial cards) |
-| Input fields | Tab panels, accordions |
-| Badges, tags, chips | Logo bars, stat bands |
-| Avatar components | Any multi-section container |
-
-**Budget rule:** Spend at most 1 `use_figma` call on component search + instantiation across the entire session. If it works, great. If not, build everything from primitives using `figma-code-patterns.md` and `layout-code-templates.md` — this path is predictable and always succeeds.
-
-→ For component instantiation code: see `figma-code-patterns.md` Section 9
+Budget: max 1 `use_figma` call on component search. If import fails, build from primitives immediately.
 
 ---
 
-## 7 — Generation Process
+## 6 — Generation Process
 
-### Step 1: Verify Connection and Skills
-```
-Confirm remote MCP server is connected
-Confirm /figma-use skill is available
-```
-If either is missing, stop and instruct the user to set up the Figma MCP plugin.
+### Step 1: Verify MCP + Check for Existing Build Card
 
-### Step 1b: Check for Existing Build Card (Session Recovery)
+Confirm MCP server + `/figma-use` skill. If a Build Card file exists from a prior session, follow Session Recovery in `execution-prompts/SKILL.md`.
 
-Before starting fresh, check if a Build Card file (`{product}-build-card.md`) already exists from a prior session or pre-compaction state. If it does, follow the Session Recovery Protocol in `execution-prompts/SKILL.md` instead of starting from Step 1.
+### Step 2: Discover Page + Check Fonts
 
-### Step 2: Discover Target Page (Mandatory)
+**Page discovery (mandatory):** Run `figma-code-patterns.md` §1a — resolves URL node-id to page name. Store in Build Card.
 
-```
-Call use_figma → run page discovery snippet from figma-code-patterns.md Section 1a
-Pass the node-id from the Figma URL → returns page name and page ID
-Store page name in Build Card
-```
+**Font check (mandatory):** Run `figma-code-patterns.md` §8. If unavailable, follow fallback in `token-sources.md` §9. Update Build Card.
 
-**Rule:** Never assume the page name from the URL or project name — they often don't match. Always discover it.
+### Step 3: Search DS Components (max 3 calls)
 
-### Step 2b: Font Availability Check (Mandatory)
+### Step 4: Create Main Frame (`figma-code-patterns.md` §2)
 
-```
-Call use_figma → run font availability check from figma-code-patterns.md Section 8
-Pass all font families from the Build Card
-Returns available/unavailable status for each font
-```
-
-If any font is unavailable, follow the fallback chain in `token-sources.md` Section 9. Update the Build Card with the resolved fallback fonts before proceeding. **Do not skip this step** — unavailable fonts cause `loadFontAsync` failures that waste entire batch attempts.
-
-### Step 3: Search for Existing Components (Structural Only)
-```
-Call search_design_system → check for reusable structural components
-(buttons, cards, nav bars) — max 3 search calls total
-```
-Catalog available components for reuse. Note any gaps that require building from scratch.
-
-**Do NOT search for token values** (colors, fonts, spacing). All tokens are already collected from the token source selected at session start. Apply them directly.
-
-### Step 4: Create Top-Level Frame
-```
-Invoke /figma-use skill
-Call use_figma → create frame on target page with properties from Section 4
-Use the Standard Batch Preamble from figma-code-patterns.md (includes all helpers)
-```
-
-### Step 5: Build Section Frames (Top to Bottom)
-For each section in the layout pattern's sequence:
-```
-Call use_figma → create section frame → set dimensions, padding, fill
-  → Use Standard Batch Preamble helpers (mkSection, mkText, mkGrid, etc.)
-  → Create component frames within section (reuse library components where possible)
-    → Populate text content
-    → Place images or placeholders
-    → Apply token values (bind to variables when available)
-```
+### Step 5: Build Sections (2–3 per batch, use Standard Batch Preamble helpers)
 
 ### Step 6: Apply Tinted Section Alternation
-```
-Walk through sections → assign tint pairs per layout_patterns rules
-```
 
-### Step 7: Self-Healing Verification Loop
+### Step 7: Self-Healing Verification
 
-This replaces the single-pass screenshot of v3.0 with a two-phase iterative verification cycle: **programmatic checks first** (catches structural issues screenshots miss), then **visual checks** (catches layout/aesthetic issues).
+Two phases per iteration (max 3 iterations):
 
-```
-LOOP (max 3 iterations):
-  Phase A — Programmatic Checks (via use_figma script):
-    Run the verification script below against the main frame.
-    This catches collapsed frames, sizing errors, and overflow
-    that are invisible in screenshots.
+**Phase A — Programmatic:** Run verification script (`figma-code-patterns.md` §12). Checks: section heights ≥ min, grid sizing = AUTO, buttons ≤ 60px, FILL inside auto-layout, text overflow.
 
-  Phase B — Visual Checks (via screenshot):
-    Take screenshot of the generated frame.
-    Compare against design spec for visual correctness.
+**Phase B — Visual:** Screenshot via `get_screenshot`. Check: section order, tint alternation, text presence, spacing, no overlaps.
 
-  If mismatches found in either phase:
-    Log each issue with description
-    Fix via use_figma
-    Continue to next iteration
+Fix all Phase A issues before Phase B. Never pass verification if any programmatic check fails.
 
-  If all checks pass → exit loop
-```
-
-#### Phase A — Programmatic Verification Script
-
-Run this `use_figma` script after each build batch and during every verification iteration. It returns a structured report of all issues found.
-
-```javascript
-// === Programmatic Verification Script ===
-const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
-await figma.setCurrentPageAsync(targetPage);
-const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
-if (!mainFrame) return { error: "Main frame not found" };
-
-const issues = [];
-const MIN_HEIGHTS = {
-  'Hero': 500, 'Feature Grid': 300, 'Feature Row': 300,
-  'Testimonial': 200, 'Logo Bar': 200, 'Metrics Bar': 200,
-  'CTA': 250, 'Pricing': 250, 'FAQ': 200, 'default': 200
-};
-const CARD_MIN_HEIGHTS = {
-  'Feature Card': 150, 'Testimonial Card': 120,
-  'Pricing Card': 200, 'Tab Panel': 200, 'default': 100
-};
-
-function checkNode(node, depth) {
-  if (node.type !== 'FRAME' && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') return;
-
-  // Check 1: Section height vs min-height
-  if (depth === 1 && node.name.startsWith('Section:')) {
-    const sectionType = node.name.replace('Section: ', '');
-    const minH = MIN_HEIGHTS[sectionType] || MIN_HEIGHTS['default'];
-    if (node.height < minH) {
-      issues.push({ node: node.id, name: node.name, issue: 'COLLAPSED_SECTION',
-        actual: node.height, expected: '>= ' + minH });
-    }
-  }
-
-  // Check 2: Card/component height vs min-height
-  if (depth === 2 || depth === 3) {
-    for (const [prefix, minH] of Object.entries(CARD_MIN_HEIGHTS)) {
-      if (prefix !== 'default' && node.name.startsWith(prefix) && node.height < minH) {
-        issues.push({ node: node.id, name: node.name, issue: 'COLLAPSED_CARD',
-          actual: node.height, expected: '>= ' + minH });
-      }
-    }
-  }
-
-  // Check 3: Grid containers must have HUG vertical sizing
-  if (node.name.includes('Grid') && node.layoutMode &&
-      node.primaryAxisSizingMode === 'FIXED') {
-    issues.push({ node: node.id, name: node.name, issue: 'GRID_FIXED_HEIGHT',
-      detail: 'Grid container has FIXED vertical sizing — should be AUTO (HUG)' });
-  }
-
-  // Check 4: Buttons should not exceed 60px height
-  if (node.name.startsWith('Button:') && node.height > 60) {
-    issues.push({ node: node.id, name: node.name, issue: 'OVERSIZED_BUTTON',
-      actual: node.height, expected: '<= 60' });
-  }
-
-  // Check 5: FILL-sized children must be inside auto-layout parents
-  if ((node.layoutSizingHorizontal === 'FILL' || node.layoutSizingVertical === 'FILL') &&
-      node.parent && !node.parent.layoutMode) {
-    issues.push({ node: node.id, name: node.name, issue: 'FILL_WITHOUT_AUTOLAYOUT_PARENT',
-      detail: 'Node has FILL sizing but parent has no layoutMode' });
-  }
-
-  // Recurse into children (limit depth to avoid timeout)
-  if (depth < 4 && 'children' in node) {
-    for (const child of node.children) { checkNode(child, depth + 1); }
-  }
-}
-
-// Check all text nodes for overflow
-function checkTextNodes(node, depth) {
-  if (depth > 4) return;
-  if (node.type === 'TEXT') {
-    if (node.textAutoResize === 'NONE' || node.textAutoResize === 'WIDTH_AND_HEIGHT') {
-      if (node.parent && node.parent.layoutMode) {
-        issues.push({ node: node.id, name: node.name, issue: 'TEXT_MAY_OVERFLOW',
-          detail: 'textAutoResize=' + node.textAutoResize + ' inside auto-layout — should be HEIGHT' });
-      }
-    }
-  }
-  if ('children' in node) {
-    for (const child of node.children) { checkTextNodes(child, depth + 1); }
-  }
-}
-
-for (const child of mainFrame.children) { checkNode(child, 1); }
-checkTextNodes(mainFrame, 0);
-
-return {
-  totalSections: mainFrame.children.length,
-  issueCount: issues.length,
-  issues: issues,
-  passed: issues.length === 0,
-  summary: issues.length === 0
-    ? 'All programmatic checks passed'
-    : issues.length + ' issues found — fix before visual check'
-};
-// === End Verification Script ===
-```
-
-#### Phase B — Visual Checks (via screenshot)
-
-After programmatic checks pass (or after fixing flagged issues), take a screenshot and check:
-
-- Section order matches layout pattern?
-- Tinted sections alternate correctly?
-- Text content is present and readable (not clipped, not overflowing)?
-- Component spacing looks correct?
-- No broken layouts or overlapping elements?
-- All sections occupy visible vertical space proportional to their content?
-
-#### Fix Procedures
-
-**Collapsed section (COLLAPSED_SECTION / COLLAPSED_CARD):**
-```
-1. Check child layers:
-   a. Text layers missing textAutoResize: "HEIGHT" → fix
-   b. Image placeholders missing explicit height → set height
-   c. Inner frames with primaryAxisSizingMode: "FIXED" → set to "AUTO"
-   d. Auto-layout spacing set to 0 or negative → fix to design token spacing
-2. After fixing children, if section still below min-height → set explicit minHeight
-```
-
-**Grid with fixed height (GRID_FIXED_HEIGHT):**
-```
-Set primaryAxisSizingMode = 'AUTO' on the grid container frame
-```
-
-**Oversized button (OVERSIZED_BUTTON):**
-```
-Check for extra padding or nested frames inflating height — set explicit resize()
-```
-
-**FILL without auto-layout parent (FILL_WITHOUT_AUTOLAYOUT_PARENT):**
-```
-Either set parent.layoutMode = 'VERTICAL' or change child sizing to 'FIXED'/'HUG'
-```
-
-**Text overflow (TEXT_MAY_OVERFLOW):**
-```
-Set textAutoResize = 'HEIGHT' and layoutSizingHorizontal = 'FILL' after confirming parent has auto-layout
-```
-
-**Rule:** Never mark the verification loop as passed if the programmatic script reports any issues. Programmatic checks take priority over visual checks — fix all reported issues before taking a screenshot.
-
-**Exit conditions:**
-- Programmatic checks pass AND visual checks pass → proceed to Step 7
-- Max iterations reached → proceed to Step 7 with deviation log listing all unfixed issues
-- Critical failure (frame didn't generate, MCP error) → stop and report
-
-### Step 8: Final Screenshot and Report
-```
-Take final screenshot via use_figma
-Present to user with summary
-```
+### Step 8: Final Screenshot + Report
 
 ---
 
-## 8 — Post-Generation
+## 7 — Post-Generation
 
-After the frame is generated:
-
-1. **Present to user:** Show a screenshot of the generated frame and summarize what was built (section count, component types used, library components reused, any content gaps flagged)
-2. **Verification summary:** Report results from the self-healing loop — how many iterations, what was fixed, any remaining deviations
-3. **Flag issues:** List any content gaps, missing images, or decisions the agent made that the user should review
-4. **Next steps:** Remind the user of their options:
-   - Review and correct in Figma, then run Mode B for code
-   - Accept as-is and run Mode B immediately
-   - Request specific changes in the current session
+1. Screenshot + summary (section count, components reused, gaps flagged)
+2. Verification results (iterations, fixes, remaining deviations)
+3. Fabricated content list (what needs user review)
+4. Next steps: correct in Figma → Mode B, or accept → Mode B, or request changes
 
 ---
 
-## 9 — Blueprint → Figma (C → A Escalation)
+## 8 — Blueprint → Figma (C → A Escalation)
 
-Two escalation paths are available when Mode C output needs to become a Figma frame.
+**Path A (Structured):** Blueprint as pre-decided spec → execute Steps 4–8 directly, skip brief parsing. Use when frame will be edited in Figma.
 
-### Path A: Blueprint → use_figma (Structured Build)
-
-When Mode C escalates to Figma using the blueprint as a pre-decided spec, the agent executes Steps 3–7 from Section 7 directly — no brief re-parsing or pattern selection.
-
-**When to use:** When you want a structured Figma frame built from the blueprint with proper layer naming, auto-layout, and design system bindings. Best for frames that will be edited further in Figma.
-
-**Prompt recognition:** If the user's prompt includes a blueprint file reference and says "do not re-analyze" or "use this as the design spec," the agent follows this path.
-
-### Path B: HTML → generate_figma_design (Quick Visual)
-
-When Mode C has already produced working HTML, the agent can push the rendered HTML directly into Figma as editable layers.
-
-```
-1. Serve the Mode C HTML output (index.html + styles.css + script.js)
-2. Call generate_figma_design with the live URL or localhost
-3. Figma receives editable layers matching the rendered HTML
-4. User corrects in Figma as needed
-5. Run Mode B against the corrected frame for final production code
-```
-
-**When to use:** When you want a fast visual representation in Figma without building structured frames from scratch. The output layers mirror the rendered HTML rather than following the Section 5 naming convention. Best for quick review cycles.
-
-**Tradeoff:** Path B layers won't have the structured naming and auto-layout of Path A. If extensive Figma editing is planned, Path A is preferred. If the goal is visual review followed by Mode B code generation, Path B is faster.
-
-→ For Mode B code generation from either path: see `figma-code-extractor`
-
----
-
-## 10 — Custom Skill Packaging (Optional)
-
-Your skill files can be packaged as installable Figma skills for sharing across teams or the Figma Community.
-
-### Converting figma-frame-builder to a Figma Skill
-
-The Figma skill format uses YAML frontmatter instead of HTML comment metadata:
-
-```markdown
----
-name: me-generate-landing-page
-description: "Generate a landing page frame from a content brief using the UX Skill File Architecture. Use when building new product landing pages that follow the design system standards."
-compatibility: Requires the figma-use skill to be installed alongside this skill
-metadata:
-  mcp-server: figma
-  version: 5.0
-  author: "{PLACEHOLDER}"
----
-
-# Generate landing page
-
-**Always pass `skillNames: "me-generate-landing-page"` when calling `use_figma` as part of this skill.**
-
-**You MUST invoke the `figma-use` skill before every `use_figma` call.**
-
-## When to use
-- Creating new product landing pages from a content brief
-- Escalating a Mode C Page Blueprint into a Figma frame
-- Rebuilding an existing landing page with updated content
-
-## Instructions
-1. Read the content brief and parse using brief-parser rules
-2. Search connected libraries for existing design system components
-3. Infer page type and select section layout types from layout-patterns
-4. Create the top-level frame at 1440px width
-5. Build sections top to bottom, reusing library components
-6. Apply design tokens from design-tokens
-7. Run the self-healing verification loop (screenshot → compare → fix)
-8. Present final screenshot with summary
-
-## Examples
-**Input:** "Generate a landing page for MSP Central using the attached brief"
-**Output:** A 1440px Figma frame with 7 sections (Hero, Trust Signals, Feature Grid, Feature Deep-Dive, Testimonials, Integration Grid, Closing CTA), all text populated from the brief, library buttons and cards reused, tinted sections alternating correctly.
-```
-
-### Supporting Files
-
-A packaged skill can include:
-- `scripts/` — Reusable Plugin API scripts for common frame operations
-- `references/` — Token value tables, component spec summaries
-- `assets/` — Template frames or starter components
-
-→ For skill authoring details: see Figma developer docs at `developers.figma.com/docs/figma-mcp-server/create-skills/`
+**Path B (Quick Visual):** Push Mode C HTML via `generate_figma_design`. Faster but layers lack structured naming. Use for quick review → Mode B.

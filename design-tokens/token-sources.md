@@ -1,347 +1,191 @@
 # Token Sources — Ingestion Protocols
 
-→ This file is a reference for `design-tokens/SKILL.md`
+→ Reference for `design-tokens/SKILL.md`
 
-This file defines how the agent extracts and resolves design token values from any of the 7 supported input sources. Every source produces the same output: a resolved set of token values in `token-values.md` format, ready for downstream skills.
+Extracts design tokens from 7 supported sources. Every source produces the same output: resolved values in `token-values.md` format. Unresolved tokens remain `{PLACEHOLDER}`.
 
-**Detection order:** See `pipeline-workflow/SKILL.md` — Token Source Detection section.
-
-**Output format for all sources:**
-Extracted values must be mapped to the canonical token names defined in `design-tokens/SKILL.md`. The agent fills `token-values.md` (or an equivalent in-session record) with resolved values and proceeds. Any token that cannot be resolved is left as `{PLACEHOLDER}` and flagged as a gap.
+**Detection order:** `pipeline-workflow/SKILL.md` — Token Source Detection.
 
 ---
 
 ## Source 1 — Product Token File (.md)
 
-**Recognition signal:** A `.md` file is attached or referenced that contains token names and values — typically named `{product}-design-tokens.md` or `{product}-tokens.md`.
+**Signal:** `.md` file with token names/values (named `{product}-tokens.md`).
 
-**Extraction steps:**
-1. Read the file in full
-2. Match each row or entry to a canonical token name from `design-tokens/SKILL.md`
-3. Apply the value directly — no transformation needed if the file follows the `token-values.md` format
-4. If the file uses different naming, apply token name normalization (see Section 8)
-5. Record resolved values and flag any canonical tokens not covered
+1. Read file, match entries to canonical token names from `design-tokens/SKILL.md`
+2. Apply token name normalization (Section 8) if naming differs
+3. Flag unmatched canonical tokens as gaps
 
-**Notes:**
-- This is the cleanest source — minimal ambiguity if the file follows the standard format
-- Multiple product files can coexist — the agent uses the one matching the active product prefix
-- If the file is a partial fill (only some tokens filled), it is combined with any other available source for remaining gaps
+Cleanest source. Multiple product files → use the one matching active product prefix. Partial fill → combine with other source for gaps.
 
 ---
 
 ## Source 2 — Manual Fill
 
-**Recognition signal:** `token-values.md` already has actual values in the Value column (i.e. `{PLACEHOLDER}` entries have been replaced).
+**Signal:** `token-values.md` already has actual values (not `{PLACEHOLDER}`).
 
-**Extraction steps:**
-1. Read `token-values.md`
-2. Treat all filled values as resolved
-3. Remaining `{PLACEHOLDER}` entries are flagged as gaps — do not invent values
-
-**Notes:**
-- No extraction needed — values are already in the canonical format
-- Agent proceeds directly to token application after reading the file
+Read file. Treat filled values as resolved. Remaining `{PLACEHOLDER}` → gaps. No extraction needed.
 
 ---
 
 ## Source 3 — Website URL
 
-**Recognition signal:** A website URL is provided alongside the brief or as a reference.
+**Signal:** Website URL provided alongside brief.
 
-**Permission requirement:** Before fetching any website URL, the agent must confirm with the user that the URL is accessible and that they have permission to use it as a design reference. See `pipeline-workflow/SKILL.md` — URL Access Permission section.
+**Permission:** Confirm with user before fetching. See `pipeline-workflow/SKILL.md`.
 
-**Fetch method (hardcoded):** Use `curl` via Bash to retrieve raw HTML and CSS files. This is the only permitted method — raw content is required for precise token extraction.
+**Fetch:** `curl -s <URL>` only. Parse `<link rel="stylesheet">` tags, fetch each (max 5 stylesheets). Do NOT use WebFetch, Python, wget, or browser automation.
 
-**Known limitation:** Some domains (e.g., manageengine.com) block `curl` requests via WAF, bot detection, or Cloudflare. This is expected — not all sites can be scraped. When this happens, follow the curl failure protocol below and ask the user for an alternative source.
+**Curl failure protocol:** If curl fails (403, timeout, WAF block, any non-200): stop immediately. Do not retry, navigate sub-pages, or try alternative tools. Ask user for alternative: screenshot (Source 6), CSS file (Source 3b), or token file (Source 7).
 
-1. `curl -s <URL>` — fetch the page HTML
-2. Parse `<link rel="stylesheet" href="...">` tags to find CSS file URLs
-3. `curl -s <CSS_URL>` — fetch each linked stylesheet
-4. Extract from the raw CSS: `:root {}` custom properties, element styles, computed values
+**Scope:** Fetch the exact URL only. Never crawl linked pages or sitemaps.
 
-**Rules:**
-- Do **not** use `WebFetch` — it processes content through an AI model and loses raw CSS precision
-- Do **not** use Python `requests`, `wget`, or browser automation
-- **Curl failure protocol (STRICT):** If `curl` fails on the given URL (403, 404, timeout, empty response, WAF block, or any non-200 status):
-  1. **Stop immediately** — do not retry the same URL
-  2. **Do not navigate to sub-pages** — never try `/about`, `/features`, `/pricing`, or any other path on the same domain
-  3. **Do not try alternative tools** — no WebFetch, no Python, no wget
-  4. **Ask the user** to choose an alternative token source: screenshot (Source 6), manual CSS file export, or JSON token file (Source 7)
-  5. Present the failure clearly: "curl could not access {URL}. This domain may block automated requests. Please provide tokens via: (a) screenshot of the page, (b) exported CSS file, or (c) token file."
-- Fetch the **exact URL provided only** — do not crawl linked pages, sub-pages, or sitemaps. If the user shares `example.com/product`, fetch only that page and its linked stylesheets. Never traverse to `example.com/pricing` or any other path.
-- Maximum 5 stylesheet fetches per page (main CSS + up to 4 linked sheets)
+### Source 3b — Direct CSS File
 
-### Handling Minified CSS Files
+**Signal:** User provides a CSS file directly (attached or referenced) instead of a URL.
 
-Production CSS files are often minified (single-line, no whitespace, 10K–50K+ characters). These cannot be read directly in context — they exceed token limits and are unparseable inline. When a CSS file (fetched via curl or provided by the user) is minified:
+Skip all fetch steps. If minified, apply the Minified CSS protocol below. Then proceed directly to Track A (colors) and Track B (non-color) extraction.
 
-**Detection:** If the CSS file has fewer than 10 lines but more than 5K characters, it's minified.
+### Minified CSS Protocol
 
-**Expansion protocol (run via Bash):**
+**Detection:** <10 lines but >5K characters → minified.
 
 ```bash
-# Step 1: Expand minified CSS into readable lines
+# Expand
 tr ';' '\n' < {FILE}.css | tr '{' '\n' | tr '}' '\n' > {FILE}-expanded.css
 
-# Step 2: Extract CSS custom properties (design tokens)
+# Extract tokens, fonts, colors, radius, shadows, font-sizes
 grep -oE '\-\-[a-zA-Z0-9_-]+:\s*[^;]+' {FILE}-expanded.css | sort -u > tokens-raw.txt
-
-# Step 3: Extract font families
 grep -oE 'font-family:\s*[^;]+' {FILE}-expanded.css | sort -u > fonts-raw.txt
-
-# Step 4: Extract all hex colors (deduplicated)
 grep -oE '#[0-9a-fA-F]{3,8}' {FILE}-expanded.css | sort -u > colors-raw.txt
-
-# Step 5: Extract border-radius, box-shadow, font-size values
 grep -oE 'border-radius:\s*[^;]+' {FILE}-expanded.css | sort -u > radius-raw.txt
 grep -oE 'box-shadow:\s*[^;]+' {FILE}-expanded.css | sort -u > shadows-raw.txt
 grep -oE 'font-size:\s*[^;]+' {FILE}-expanded.css | sort -u > font-sizes-raw.txt
 ```
 
-**After expansion:** Process the extracted files through the normal Track A (colors) and Track B (non-color) extraction pipelines below. The expanded file may still be large — work from the extracted text files, not the full expanded CSS.
-
-**Rule:** Never try to read a minified CSS file directly into context. Always expand and extract via Bash first.
-
-**Extraction is split into two tracks:** color extraction (coverage-based classification) and non-color extraction (CSS property mapping). These run in parallel.
-
----
+Work from extracted files, not the full expanded CSS. Never read minified CSS directly into context.
 
 ### Track A — Color Extraction (Coverage-Based)
 
-Colors cannot be reliably classified from CSS property names alone. Instead, collect all colors first, rank by visual weight, then assign roles.
+Colors are classified by visual weight, not CSS property names.
 
-**Step 1 — Collect all colors from the page:**
-- CSS custom properties (`:root {}` and scoped vars) — all color-valued `--*` declarations
-- Computed `background-color` on all visible elements
-- Computed `color` on all text elements
-- Computed `border-color` on cards, buttons, dividers
-- Gradient color stops (`linear-gradient`, `radial-gradient`)
-- SVG `fill` and `stroke` values
-- Note any `background-image` URLs on hero/banner sections (for Step 4)
+**Step 1 — Collect** all colors: CSS custom properties, background-color, color, border-color, gradients, SVG fill/stroke. Note `background-image` URLs on hero/banner sections.
 
-**Step 2 — Calculate % coverage:**
-- Weight each unique color by: (number of elements using it) × (estimated visual area of those elements)
-- Group similar colors within a close perceptual range (e.g. `#E9142B` and `#EA1529`) as one color
-- Separate chromatic colors (hues with saturation) from achromatic (white, black, grays)
+**Step 2 — Calculate % coverage:** Weight by (element count × visual area). Group perceptually similar colors. Separate chromatic from achromatic.
 
-**Step 3 — Classify by two independent paths:**
+**Step 3 — Classify via three independent paths:**
 
-Brand primary and CTA color are extracted **separately**. They may or may not be the same color.
+**Path A — Brand (page-wide, non-button elements):**
 
-**Path A — Brand colors (from page-wide coverage):**
-
-| Method | Classification | Token |
-|---|---|---|
-| Highest-coverage chromatic color across all non-button elements (headers, nav, section accents, tinted backgrounds, icons) — typically 50%+ of branded areas | Primary brand color | `color-primary` |
-| Second-highest chromatic color (if visually distinct) | Secondary brand color | `color-secondary` |
-
-**Path B — CTA color (from button elements only):**
-
-| Method | Classification | Token |
-|---|---|---|
-| `background-color` on primary action buttons (`.btn-primary`, `[class*="cta"]`, `button[type="submit"]`, the most prominent button) | CTA action color | `color-cta` |
-| Derive from CTA: darken ~10% | CTA hover | `color-cta-hover` |
-| Derive from CTA: darken ~15% | CTA active | `color-cta-active` |
-
-**Path C — Neutral & text colors (from context):**
-
-| Method | Classification | Token |
-|---|---|---|
-| Light achromatic covering the largest page area | Page background | `color-bg-page` |
-| Slightly different light neutral on cards/components | Surface background | `color-bg-surface` |
-| Darkest color used on body/paragraph text | Primary text | `color-text-primary` |
-| Medium-contrast color used on descriptions/metadata | Secondary text | `color-text-secondary` |
-| Lightest/muted text color (captions, hints) | Tertiary text | `color-text-tertiary` |
-| Light color used on text over dark/primary backgrounds | Inverse text | `color-text-inverse` |
-
-**After extraction, compare:**
-- If `color-cta` = `color-primary` (same or very similar) → note: "CTA uses brand primary"
-- If `color-cta` ≠ `color-primary` → note: "CTA uses a distinct action color" — both tokens get their own values
-
-**Step 4 — Derive tinted section colors from primary/secondary:**
-- Identify section backgrounds that use a tinted/translucent version of the primary color → `tint-1`
-- Identify any secondary-tinted section backgrounds → `tint-2`
-- Identify any neutral gray section backgrounds → `tint-3`
-- If a dark section background exists (footer, hero) → `tint-4`
-- Derive matching border colors per tint from visible card/component borders within those sections
-
-**Step 5 — Hero/banner image color extraction:**
-
-CSS extraction misses brand colors embedded in background images. This step recovers them using targeted image download + Python color analysis.
-
-**5a — Identify candidate images (filter strictly):**
-
-Only analyze images that are likely to carry the brand's primary color. Download rules:
-
-| Download | Skip |
+| Method | Token |
 |---|---|
-| `background-image` on the first/hero section | `<img>` tags (content images — product shots, photos, thumbnails) |
-| `background-image` on elements with class/id containing: `hero`, `banner`, `header`, `masthead`, `cover` | Images in `<figure>`, `<picture>`, cards, galleries |
-| CSS gradient overlays on the hero section | SVG files (icons, illustrations) |
-| | Images smaller than 400×200 px (icons, badges, logos) |
-| | Images from stock photo CDNs (`unsplash`, `pexels`, `shutterstock`, `getty`) |
-| | Favicons, open graph images, `<meta>` images |
+| Highest-coverage chromatic (headers, nav, tints, icons) | `color-primary` |
+| Second chromatic (if distinct) | `color-secondary` |
 
-**Maximum: 2 images downloaded.** If more candidates match, take only the first hero `background-image` and the first banner `background-image`. Do not crawl the full page for images.
+**Path B — CTA (button elements only):**
 
-**5b — Extract dominant color via Python:**
+| Method | Token |
+|---|---|
+| `background-color` on primary action buttons | `color-cta` |
+| Darken CTA ~10% / ~15% | `color-cta-hover` / `color-cta-active` |
+
+**Path C — Neutrals & text:**
+
+| Method | Token |
+|---|---|
+| Largest light area | `color-bg-page` |
+| Card/component light | `color-bg-surface` |
+| Darkest text | `color-text-primary` |
+| Medium-contrast text | `color-text-secondary` |
+| Muted text | `color-text-tertiary` |
+| Light on dark backgrounds | `color-text-inverse` |
+
+If `color-cta` = `color-primary` → note "CTA uses brand primary." If different → both get own values.
+
+**Step 4 — Derive tints:** tinted primary sections → `tint-1`, secondary → `tint-2`, neutral gray → `tint-3`, dark (footer/hero) → `tint-4`. Derive border colors per tint.
+
+**Step 5 — Hero image color extraction** (only if Step 1 found `background-image` on hero/banner):
+
+Download max 2 images (hero + banner `background-image` only). Skip `<img>` tags, SVGs, icons, stock CDN images, images <400×200.
 
 ```python
 from PIL import Image
 from collections import Counter
 import io, subprocess
 
-# Download the image
 img_data = subprocess.run(['curl', '-s', img_url], capture_output=True).stdout
-img = Image.open(io.BytesIO(img_data)).convert('RGB')
-
-# Resize to speed up analysis (exact pixels don't matter, we need color distribution)
-img = img.resize((150, 150))
-
-# Get all pixels, filter out near-white and near-black
+img = Image.open(io.BytesIO(img_data)).convert('RGB').resize((150, 150))
 pixels = list(img.getdata())
 chromatic = [p for p in pixels if not (
-    (p[0] > 230 and p[1] > 230 and p[2] > 230) or  # near-white
-    (p[0] < 25 and p[1] < 25 and p[2] < 25)          # near-black
+    (p[0] > 230 and p[1] > 230 and p[2] > 230) or
+    (p[0] < 25 and p[1] < 25 and p[2] < 25)
 )]
-
-# Quantize to reduce noise — round each channel to nearest 16
-quantized = [((r // 16) * 16, (g // 16) * 16, (b // 16) * 16) for r, g, b in chromatic]
-
-# Most common chromatic color = likely primary brand color
+quantized = [((r//16)*16, (g//16)*16, (b//16)*16) for r, g, b in chromatic]
 dominant = Counter(quantized).most_common(1)[0][0]
 hex_color = '#{:02x}{:02x}{:02x}'.format(*dominant)
 ```
 
-**5c — Decide whether to use the result:**
+Use result only if coverage-based extraction found no strong `color-primary`. Delete images after extraction.
 
-| Condition | Action |
-|---|---|
-| Coverage-based extraction already found a strong `color-primary` (dominant across headers, nav, sections) | Ignore the image color — coverage value is authoritative |
-| Coverage found no clear `color-primary` but image yields a strong chromatic color | Use image color as `color-primary`, flag: `/* extracted from hero background image */` |
-| Image yields a color matching the CTA color but NOT covering the rest of the site | This confirms CTA ≠ primary — the image just shows CTA color in context. Do not use as `color-primary`. |
-| Image yields a color very close to an existing CSS-extracted color | Confirms the CSS extraction — no change needed |
-| Image yields only neutrals/grays or no dominant chromatic color | Skip — the image is photographic, not brand-colored |
+### Track B — Non-Color Extraction
 
-**5d — Cleanup:**
-- Delete downloaded image files immediately after extraction — do not keep them in the project folder
-- This step adds ~2 seconds to the pipeline — only run it when Step 1 found a `background-image` on a hero/banner element
+**Step 1 — CSS custom properties:** Scan `:root {}` for non-color `--*` variables.
 
----
+**Step 2 — If no custom properties, extract computed values:**
 
-### Track B — Non-Color Extraction (CSS Property Mapping)
-
-Typography, spacing, shadows, radius, and other non-color tokens are extracted by matching CSS properties/selectors to token names.
-
-**Step 1 — Extract CSS custom properties** — scan `:root {}` for non-color `--*` variables:
-```css
-:root {
-  --font-heading: 'ZohoPuvi', sans-serif;
-  --spacing-md: 16px;
-}
-```
-
-**Step 2 — If no custom properties exist**, extract computed values:
-
-| Token Category | CSS Selector / Property to Target |
+| Token | CSS Target |
 |---|---|
 | `font-heading` | `h1`, `h2` font-family |
 | `font-body` | `body`, `p` font-family |
-| `font-size-display` | `h1` font-size on hero sections |
+| `font-size-display` | `h1` on hero |
 | `font-size-h2` | `h2` font-size |
 | `font-size-body` | `p`, `body` font-size |
-| `space-unit` | Smallest recurring spacing value |
-| `section-padding-y` | Section or `.section` padding-top / padding-bottom |
-| `content-max-width` | `.container`, `.wrapper`, `main` max-width |
-| `radius-sm` | Button border-radius |
-| `radius-md` | Card border-radius |
+| `space-unit` | Smallest recurring spacing |
+| `section-padding-y` | Section padding-top/bottom |
+| `content-max-width` | `.container`, `main` max-width |
+| `radius-sm` / `radius-md` | Button / card border-radius |
 | `shadow-md` | Card box-shadow |
 
-**Step 3 — Apply token name normalization** (see Section 8) for any CSS custom property names.
-
-**Step 4 — Verify values** — for sizes, confirm units (prefer px or rem).
-
----
+**Step 3–4:** Apply normalization (Section 8). Verify units (prefer px/rem).
 
 ### Combined Output
 
-Merge Track A (color tokens) and Track B (non-color tokens) into a single resolved set. Flag gaps for any canonical token without a match.
-
-**Limitation:** CSS extraction may miss colors embedded in images, and cannot reliably recover all spacing scale steps. Cross-reference with a screenshot source when possible.
+Merge Track A + Track B. Flag gaps. Limitation: CSS misses image-embedded colors and may not capture all spacing scale steps.
 
 ---
 
 ## Source 4 — Figma Design System (Variables & Tokens)
 
-**Recognition signal:** A Figma library URL, design system reference, or explicit instruction to use a connected Figma design system is provided.
+**Signal:** Figma library URL or design system reference.
 
-**Extraction steps:**
+**Step 1 — Try local variables** via `use_figma`: Run `figma-code-patterns.md` §11.1–11.2.
 
-**Step 1 — Try local variables first** via `use_figma`:
-Run the variable extraction script from `figma-frame-builder/figma-code-patterns.md` Section 11.1–11.2. This calls `figma.variables.getLocalVariableCollectionsAsync()` to read all local variable collections.
+**Step 2 — If 0 local variables, try library:**
 
-**Step 2 — If local extraction returns 0 variables, try library variables:**
-Most production design systems (e.g., UEMS DS 3.0) store tokens in a connected **library**, not in the local file. `getLocalVariableCollectionsAsync()` only returns variables defined in the current file — it will miss library tokens entirely.
-
-Library extraction path:
 ```
-Option A (MCP tools — preferred):
-1. Call get_variable_defs on any frame that uses the design system
-   → Returns all variable bindings on that frame's elements
-   → Captures colors, spacing, typography actually in use
-2. Call search_design_system with queries: "color", "spacing", "typography"
-   → Returns variable names and values from connected libraries
+Option A (MCP — preferred):
+1. get_variable_defs on any DS frame → variable bindings
+2. search_design_system("color"), ("spacing"), ("typography") → library values
 
-Option B (Plugin API — if MCP tools don't return enough):
-1. Via use_figma, call:
-   const collections = await figma.teamLibrary
-     .getAvailableLibraryVariableCollectionsAsync();
-   → Returns metadata for all connected library collections
-2. For each collection, call:
-   const variables = await figma.teamLibrary
-     .getLibraryVariableCollectionById(collection.key);
-   → Returns variable names and values from the library
-3. Resolve alias chains using the pattern in
-   figma-code-patterns.md Section 11.2
+Option B (Plugin API — fallback):
+1. figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()
+2. For each: getLibraryVariableCollectionById(key)
+3. Resolve aliases per figma-code-patterns.md §11.2
 ```
 
-**Step 3 — Combine and deduplicate:**
-If both local and library results exist, library values take precedence for any conflicts (the library is the source of truth).
+**Step 3:** Library values override local on conflict. **Step 4:** Flatten to `name: value` pairs. **Step 5:** Normalize (Section 8). **Step 6:** Font check (Section 9). **Step 7:** Bind CSS properties to Figma variables in Mode A. **Step 8:** Flag gaps.
 
-**Step 4 — Collect the output** — a flat list of variable name → value pairs:
-```
-color/brand/primary: #E9142B
-typography/heading/font-family: ZohoPuvi
-spacing/md: 16px
-```
+**Common Figma variable → token mappings:**
 
-**Step 5 — Apply token name normalization** (see Section 8) — Figma variable names use `/` path separators and may use nested naming conventions.
-
-**Step 6 — Run font availability check** — see Section 9. Proprietary fonts (ZohoPuvi, etc.) may not be available in Figma cloud.
-
-**Step 7 — Bind to Figma variables in output** — when tokens are sourced from a Figma design system, the agent should bind CSS custom properties to Figma variables in the generated frame (Mode A) rather than hardcoding values. This ensures the Figma output stays in sync with the design system.
-
-**Step 8 — Flag gaps** — tokens with no matching Figma variable are left as `{PLACEHOLDER}`.
-
-**Known limitation:** Library variable extraction may return variable names without resolved values if the library uses complex alias chains across multiple collections. In that case, fall back to `search_design_system` + `get_design_context` on a reference frame to capture the actual rendered values.
-
-**Figma variable naming conventions — common patterns:**
-
-| Figma Variable Path | Canonical Token |
+| Figma Path | Token |
 |---|---|
 | `color/brand/primary` | `color-primary` |
 | `color/cta/primary` or `color/action/primary` | `color-cta` |
-| `color/cta/hover` or `color/action/hover` | `color-cta-hover` |
 | `color/text/primary` | `color-text-primary` |
-| `color/text/secondary` | `color-text-secondary` |
 | `color/bg/page` | `color-bg-page` |
-| `color/bg/surface` | `color-bg-surface` |
 | `typography/heading/family` | `font-heading` |
 | `typography/body/family` | `font-body` |
-| `typography/size/display` | `font-size-display` |
-| `typography/size/h2` | `font-size-h2` |
 | `spacing/unit` | `space-unit` |
-| `spacing/md` | `space-md` |
 | `spacing/section/y` | `section-padding-y` |
 | `radius/sm` | `radius-sm` |
 | `shadow/md` | `shadow-md` |
@@ -350,453 +194,176 @@ spacing/md: 16px
 
 ## Source 5 — Figma Design Frame
 
-**Recognition signal:** A Figma frame URL or dev link is provided alongside a brief (Modes A/C) or as the sole input (Mode B).
+**Signal:** Figma frame URL or dev link.
 
-**Extraction steps:**
+1. `get_design_context` → layout, spacing, colors, typography
+2. `get_variable_defs` → variable bindings
+3. Extract: fills → colors, text styles → fonts/sizes, spacing → space tokens, radius → radius tokens, shadows
+4. Prefer variable-bound values over raw values
+5. Normalize (Section 8). Flag gaps.
 
-1. **Run `get_design_context`** on the provided frame URL. This returns structured layout, spacing, colors, and typography from the frame.
-
-2. **Run `get_variable_defs`** on the same node to retrieve any variable bindings on frame elements.
-
-3. **Extract token values from the response:**
-   - Fill colors → `color-primary`, `color-bg-page`, tint values
-   - Text styles → `font-heading`, `font-body`, `font-size-*`
-   - Spacing between elements → `space-*`, `section-padding-y`, `grid-gutter`
-   - Border radius on cards/buttons → `radius-sm`, `radius-md`
-   - Box shadows on cards → `shadow-md`
-
-4. **Prefer variable-bound values** — if an element's color or spacing is bound to a Figma variable, use the variable name and value directly. This is the most reliable extraction path.
-
-5. **For unbound values**, extract raw pixel/hex values and apply token name normalization based on context (e.g. button background color → `color-primary`, section top padding → `section-padding-y`).
-
-6. **Apply token name normalization** (see Section 8).
-
-7. **Flag gaps** — tokens that cannot be inferred from the frame's visible elements are left as `{PLACEHOLDER}`.
-
-**Note:** Frame extraction is context-dependent — a hero-only frame won't yield spacing tokens for inner sections. A full-page frame produces the most complete extraction.
+Frame extraction is context-dependent — full-page frame gives most complete results.
 
 ---
 
 ## Source 6 — Screenshot / Image
 
-**Recognition signal:** A `.png`, `.jpg`, `.webp`, or similar image file is attached.
+**Signal:** `.png`, `.jpg`, `.webp` attached.
 
-**Extraction is split into two tracks:** color extraction (visual coverage-based) and non-color extraction (visual estimation). Same principle as Source 3 — classify colors by dominance, not by guessing their role from context.
+### Track A — Visual Color Extraction
 
----
+Same classification logic as Source 3 Track A (Paths A/B/C), but from visual inspection instead of CSS parsing. Key advantage: screenshots capture hero/banner image colors that CSS misses.
 
-### Track A — Visual Color Extraction (Coverage-Based)
+### Track B — Visual Estimation
 
-**Step 1 — Scan ALL distinct colors visible in the screenshot:**
-- Background areas (page, sections, cards, hero)
-- Text colors (headings, body, captions)
-- UI element colors (buttons, icons, borders, accents)
-- Image-embedded colors (hero/banner images, illustrations)
-- Separate chromatic colors from achromatic (white, black, grays)
-
-**Step 2 — Estimate % visual coverage for each color:**
-- Which chromatic color occupies the most visual real estate?
-- Which achromatic tones form the page/section backgrounds?
-- Which dark tones are used for text?
-
-**Step 3 — Classify using two independent paths (same as Source 3):**
-
-**Path A — Brand colors (from page-wide visual coverage):**
-
-| Method | Classification | Token |
+| Category | Extractable | Accuracy |
 |---|---|---|
-| Highest-coverage chromatic color across non-button areas (headers, nav, section tints, accents) | Primary brand color | `color-primary` |
-| Second chromatic color (if visibly distinct) | Secondary brand color | `color-secondary` |
+| Colors | Yes (color-pick) | High |
+| Font family | Partial (visual match) | Medium |
+| Font sizes | Partial (proportions) | Low |
+| Spacing | No | Use defaults |
+| Radius | Partial (visual) | Low — use nearest 4/8/12/16px |
+| Shadows | Partial (visible/not) | Low — use sm/md/lg |
 
-**Path B — CTA color (from visible buttons):**
-
-| Method | Classification | Token |
-|---|---|---|
-| Color used on the most prominent action button(s) | CTA action color | `color-cta` |
-| Estimate darker shade of CTA | CTA hover | `color-cta-hover` |
-
-**Path C — Neutral & text colors:**
-
-| Method | Classification | Token |
-|---|---|---|
-| Dominant light area | Page background | `color-bg-page` |
-| Slightly different light on cards/components | Surface background | `color-bg-surface` |
-| Darkest text tone | Primary text | `color-text-primary` |
-| Mid-contrast text tone | Secondary text | `color-text-secondary` |
-| Lightest text tone | Tertiary text | `color-text-tertiary` |
-| Light text visible on dark/colored backgrounds | Inverse text | `color-text-inverse` |
-
-**Step 4 — Derive tinted section colors:**
-- Same logic as Source 3 Step 4 — identify tinted section backgrounds and their relationship to primary/secondary colors
-
-**Step 5 — Hero/banner image check (critical):**
-- Screenshots often capture what CSS scraping misses: the primary brand color may dominate a hero background image, gradient overlay, or illustration
-- If the hero/banner shows a strong chromatic color that isn't present elsewhere as a CSS-applied color, it is likely the primary brand color
-- This is a key advantage of screenshot extraction over URL extraction
-
----
-
-### Track B — Non-Color Visual Estimation
-
-**Step 1 — Typography:**
-- Identify heading font style (serif, sans-serif, display, weight) — describe visually; do not guess the exact font name → flag `font-heading` as `{PLACEHOLDER}` with a visual description note
-- Identify body font style → same approach
-- Estimate heading font size relative to body size → `font-size-display`, `font-size-h1`, `font-size-h2`
-
-**Step 2 — Spacing:**
-- Estimate section vertical padding from visual breathing room → `section-padding-y`
-- Estimate content max-width from visible content column relative to viewport → `content-max-width`
-- Estimate card internal padding → `card-padding`
-
-**Step 3 — Shape & elevation:**
-- Identify border radius on buttons → `radius-sm`
-- Identify border radius on cards → `radius-md`
-- Identify shadow depth on cards → `shadow-sm`, `shadow-md`, `shadow-lg`, or `shadow-none`
-
----
-
-### Output Rules
-
-- **Flag all estimated values** — prefix with `/* estimated from screenshot */` in the output for human review before production use
-- **Flag what cannot be extracted** — font names, exact spacing values, hover states, semantic colors (`color-success`, `color-error`), and tinted section border colors cannot be reliably extracted from a static screenshot. Flag all as `{PLACEHOLDER}`.
-- **Cross-reference when possible** — if a URL source is also available, use URL extraction for precise values and screenshot extraction to catch hero/banner image colors that CSS misses
-
-**Limitation:** Screenshot extraction yields approximate values only. Best used as a starting point, or in combination with Source 3 for hero image color recovery.
+**Rules:** Prefix all screenshot values with `/* estimated from screenshot */`. Never infer font-family from screenshot if text-based source available. On conflicts, ask user.
 
 ---
 
 ## Source 7 — JSON Token File
 
-**Recognition signal:** A `.json` file is attached or referenced.
+**Signal:** `.json` file attached.
 
-**Extraction steps:**
+Three formats supported: Style Dictionary (`{ "color": { "primary": { "value": "#E9142B" } } }`), W3C Design Tokens (`{ "color-primary": { "$value": "#E9142B", "$type": "color" } }`), Figma Tokens/Tokens Studio (`{ "global": { "primary": { "value": "#E9142B", "type": "color" } } }`).
 
-1. **Identify the JSON format** — three common formats are supported:
-
-   **Style Dictionary format:**
-   ```json
-   {
-     "color": {
-       "primary": { "value": "#E9142B" },
-       "text": { "primary": { "value": "#1A1A1A" } }
-     },
-     "font": {
-       "heading": { "value": "ZohoPuvi, sans-serif" }
-     }
-   }
-   ```
-
-   **W3C Design Tokens format:**
-   ```json
-   {
-     "color-primary": { "$value": "#E9142B", "$type": "color" },
-     "font-heading": { "$value": "ZohoPuvi", "$type": "fontFamily" }
-   }
-   ```
-
-   **Figma Tokens (Tokens Studio) format:**
-   ```json
-   {
-     "global": {
-       "primary": { "value": "#E9142B", "type": "color" },
-       "heading-font": { "value": "ZohoPuvi", "type": "fontFamilies" }
-     }
-   }
-   ```
-
-2. **Flatten the structure** — convert all nested paths to flat key → value pairs using `/` as separator:
-   ```
-   color/primary: #E9142B
-   color/text/primary: #1A1A1A
-   font/heading: ZohoPuvi, sans-serif
-   ```
-
-3. **Apply token name normalization** (see Section 8) to map flattened keys to canonical token names.
-
-4. **Extract values** — use `value` or `$value` field depending on format.
-
-5. **Resolve aliases** — if a value references another token (e.g. `{color.brand.primary}`), resolve it before mapping.
-
-6. **Flag gaps** — canonical tokens with no JSON match are left as `{PLACEHOLDER}`.
+1. Flatten nested paths with `/` separator
+2. Normalize to canonical tokens (Section 8)
+3. Use `value` or `$value` field. Resolve aliases (e.g., `{color.brand.primary}`)
+4. Flag gaps
 
 ---
 
 ## 8 — Token Name Normalization
 
-Every source uses its own naming convention. This section defines how to map source names to canonical token names from `design-tokens/SKILL.md`.
+### Keyword Matching
 
-### Step 1: Semantic Keyword Matching
-
-Match source names to canonical tokens using keyword presence:
-
-| If source name contains... | Map to canonical token |
+| Source name contains | Maps to |
 |---|---|
-| `primary` + color context (NOT button/CTA context) | `color-primary` |
-| `secondary` + color context | `color-secondary` |
-| `cta` or `action` + color context | `color-cta` |
-| `cta-hover` or `action-hover` | `color-cta-hover` |
-| `cta-active` or `action-active` | `color-cta-active` |
-| `btn-primary` or `button-primary` + background | `color-cta` (not `color-primary`) |
-| `text-primary` or `text/primary` | `color-text-primary` |
-| `text-secondary` or `text/secondary` | `color-text-secondary` |
+| `primary` + color (not button) | `color-primary` |
+| `secondary` + color | `color-secondary` |
+| `cta` or `action` + color | `color-cta` |
+| `btn-primary` + background | `color-cta` (not `color-primary`) |
+| `text-primary` / `text/primary` | `color-text-primary` |
+| `text-secondary` | `color-text-secondary` |
 | `text-tertiary` or `muted` | `color-text-tertiary` |
 | `inverse` + text | `color-text-inverse` |
-| `border-default` or `border/default` | `color-border-default` |
-| `bg-page` or `background/page` or `surface/page` | `color-bg-page` |
-| `bg-surface` or `background/surface` or `surface/card` | `color-bg-surface` |
-| `success` + color | `color-success` |
-| `warning` + color | `color-warning` |
-| `error` or `danger` + color | `color-error` |
+| `bg-page` / `background/page` | `color-bg-page` |
+| `bg-surface` / `surface/card` | `color-bg-surface` |
+| `success` / `warning` / `error` + color | `color-success` / `color-warning` / `color-error` |
 | `heading` + font | `font-heading` |
 | `body` + font | `font-body` |
 | `mono` or `code` + font | `font-mono` |
-| `display` + size | `font-size-display` |
-| `h1` + size | `font-size-h1` |
-| `h2` + size | `font-size-h2` |
-| `h3` + size | `font-size-h3` |
-| `body-lg` or `body/lg` or `lead` | `font-size-body-lg` |
-| `body` + size (default) | `font-size-body` |
-| `body-sm` or `caption` or `small` | `font-size-body-sm` |
-| `bold` + weight | `font-weight-bold` |
-| `semibold` or `semi-bold` + weight | `font-weight-semibold` |
-| `regular` + weight | `font-weight-regular` |
-| `section-padding` or `section/padding` | `section-padding-y` |
-| `max-width` or `container-width` | `content-max-width` |
-| `narrow` + width | `content-max-width-narrow` |
-| `sidebar` + width | `sidebar-width` |
+| `display` / `h1` / `h2` / `h3` + size | `font-size-display` / `-h1` / `-h2` / `-h3` |
+| `body-lg` or `lead` / `body` / `body-sm` + size | `font-size-body-lg` / `-body` / `-body-sm` |
+| `bold` / `semibold` / `regular` + weight | `font-weight-bold` / `-semibold` / `-regular` |
+| `section-padding` | `section-padding-y` |
+| `max-width` / `container-width` | `content-max-width` |
 | `gutter` | `grid-gutter` |
-| `card-padding` or `card/padding` | `card-padding` |
-| `shadow-sm` or `shadow/sm` or `shadow/subtle` | `shadow-sm` |
-| `shadow-md` or `shadow/md` or `shadow/default` | `shadow-md` |
-| `shadow-lg` or `shadow/lg` or `shadow/prominent` | `shadow-lg` |
-| `radius-sm` or `radius/sm` or `radius/button` | `radius-sm` |
-| `radius-md` or `radius/md` or `radius/card` | `radius-md` |
-| `radius-lg` or `radius/lg` | `radius-lg` |
-| `tint-1` or `tint/1` or `surface/tint-1` | `tint-1` (surface) |
-| `tint-2` or `tint/2` or `surface/tint-2` | `tint-2` (surface) |
-| `input-height` or `input/height` | `input-height` |
-| `input-border` or `input/border` | `input-border` |
-| `input-focus` or `input/focus` | `input-border-focus` |
-| `avatar` + size | `avatar-size` |
-| `map` + height | `map-height` |
+| `card-padding` | `card-padding` |
+| `shadow-sm` / `-md` / `-lg` | `shadow-sm` / `-md` / `-lg` |
+| `radius-sm` / `-md` / `-lg` | `radius-sm` / `-md` / `-lg` |
+| `tint-1` / `tint-2` | `tint-1` / `tint-2` surface |
 
-### Step 2: Value-Type Matching (Fallback)
+### Value-Type Fallback
 
-When keyword matching is inconclusive, use the value type and context:
+When keyword matching is inconclusive: button bg → `color-cta`, page bg → `color-bg-page`, card bg → `color-bg-surface`, dark text → `color-text-primary`, largest font-size → `font-size-display`, section padding → `section-padding-y`, container max-width → `content-max-width`, small radius (2–6px) → `radius-sm`, medium (8–16px) → `radius-md`.
 
-| Value characteristics | Likely token |
-|---|---|
-| Hex/rgb color used as button background | `color-cta` (not `color-primary` — buttons indicate CTA, not brand theme) |
-| Hex/rgb color used as page/body background | `color-bg-page` |
-| Hex/rgb color used as card background | `color-bg-surface` |
-| Dark hex used as paragraph text color | `color-text-primary` |
-| Medium-contrast hex used as description text | `color-text-secondary` |
-| Font-family string containing a display/brand name | `font-heading` |
-| Font-family string using system fonts | `font-body` |
-| Largest font-size value on page | `font-size-display` or `font-size-h1` |
-| Padding value on sections/rows | `section-padding-y` |
-| Max-width on containers | `content-max-width` |
-| Small border-radius (2–6px) | `radius-sm` |
-| Medium border-radius (8–16px) | `radius-md` |
-
-### Step 3: Flag Ambiguous Matches
-
-If a source value cannot be confidently mapped to a canonical token after Steps 1 and 2:
-- Do not guess — leave as `{PLACEHOLDER}`
-- Add a comment: `/* ambiguous source value: {source-name}: {source-value} — review needed */`
-- Include in the gap report
+**Ambiguous matches:** Don't guess → leave `{PLACEHOLDER}` with comment `/* ambiguous: {name}: {value} */`.
 
 ---
 
 ## 9 — Font Availability Check (Post-Extraction)
 
-After extracting font tokens from any source, the agent must verify that the fonts are actually available in the target environment before proceeding to frame generation or code output.
+### Procedure
 
-### Why This Matters
+**Step 1 (Mode A):** Run `figma-code-patterns.md` §8 font check before building frames.
 
-Many brands use proprietary fonts (e.g., Zoho Puvi, ManageEngine's custom typefaces) that are:
-- Not available in Figma's cloud font library
-- Not available on Google Fonts or public CDNs
-- Only accessible through internal font servers or local installs
+**Step 2 — Fallback chain:**
 
-If the agent proceeds with an unavailable font, Figma frame generation will fail at `loadFontAsync()` and code output will produce invisible text.
+| Priority | Action |
+|---|---|
+| 1. Same family, different style | Family exists with different style name ("Regular" vs "Normal") |
+| 2. DS fallback mode | Figma variable collection has a "Fallback" mode |
+| 3. Visually similar Google Font | Match by characteristics (see table below) |
+| 4. System font stack | `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` |
 
-### Check Procedure
+### Font Fallback Lookup Table
 
-**Step 1 — Verify availability (Figma Mode A only):**
+| Original Font Characteristics | Fallback Candidates (try in order) |
+|---|---|
+| **Geometric sans-serif** (Futura, Avenir, Proxima Nova, ZohoPuvi) | Inter → Lato → Poppins |
+| **Humanist sans-serif** (Frutiger, Myriad, Gill Sans, Segoe UI) | Open Sans → Source Sans Pro → Noto Sans |
+| **Neo-grotesque sans-serif** (Helvetica, Arial, Univers) | Roboto → Inter → Lato |
+| **Serif** (Georgia, Palatino, Book Antiqua) | Merriweather → Playfair Display → Lora |
+| **Slab serif** (Rockwell, Courier, Memphis) | Roboto Slab → Zilla Slab |
+| **Monospace** (Menlo, Consolas, SF Mono) | JetBrains Mono → Fira Code → Source Code Pro |
+| **Display/decorative** (custom brand fonts) | Inter (safe default) → Poppins |
 
-Before building any frames, run the font availability check snippet from `figma-frame-builder/figma-code-patterns.md` Section 8. This calls `figma.listAvailableFontsAsync()` and checks each extracted font.
+**Step 3 — Report** before proceeding. Never silently substitute. Never proceed to frame generation with unavailable font.
 
-**Step 2 — Handle unavailable fonts:**
-
-If a font is not available, follow this fallback chain in order:
-
-| Priority | Fallback Action | Example |
-|---|---|---|
-| 1. Same family, different style | Check if the family exists with any style — the style name may differ (e.g., "Regular" vs "Normal") | Extracted "ZohoPuvi SemiBold" → check for "ZohoPuvi" with any style |
-| 2. Design system fallback mode | If extracting from Figma variables, check if the variable collection has a fallback mode that resolves to a different font | `Typeface` variable → Mode: "Fallback" → resolves to "Lato" |
-| 3. Visually similar Google Font | Match the extracted font's characteristics (serif/sans-serif, weight, x-height) to the closest Google Font | Proprietary sans-serif → "Inter", "Lato", or "Source Sans Pro" |
-| 4. System font stack | Use the standard system font stack as last resort | `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` |
-
-**Step 3 — Report to user before proceeding:**
-
-```
-## Font Availability Report
-
-**Extracted fonts:**
-- font-heading: "ZohoPuvi" — NOT AVAILABLE in Figma
-  → Fallback: "Lato" (from design system fallback mode)
-- font-body: "Lato" — Available ✓
-
-**Action required:** Confirm fallback fonts are acceptable, or provide font files.
-```
-
-**Rules:**
-- Never silently substitute a font — always report to user
-- Never proceed to frame generation with an unavailable font — it will error at `loadFontAsync()`
-- If the user provides font files, instruct them to install locally (Figma desktop) or upload to the team (Figma cloud)
-- For Mode C (code output), unavailable fonts should use the Google Font CDN link if a similar font exists, or flag as `{PLACEHOLDER}` with a `/* TODO: install custom font */` comment
+**Mode C:** Use Google Font CDN link for fallback, or `{PLACEHOLDER}` with `/* TODO: install custom font */`.
 
 ---
 
 ## 10 — Hybrid Token Resolution (Mixed Sources)
 
-When no single token source provides complete coverage, the agent often works with a combination of inputs: explicit values from the user, screenshots for visual reference, and partial extractions from other sources. This section defines how to merge multiple sources into one resolved token set.
+Triggered when no single source provides complete coverage.
 
-### When This Applies
+### Source Priority
 
-This protocol is triggered when:
-- The primary token source (URL, CSS file, Figma DS) fails or returns incomplete results
-- The user provides some explicit values (e.g., "primary color is #E9142B, heading font is Lato")
-- A screenshot is available for inferring remaining values
-- An earlier extraction produced partial results
+| Priority | Source | Trust |
+|---|---|---|
+| 1 | User-provided explicit values | Exact |
+| 2 | Product token file (.md) | Exact |
+| 3 | CSS/JSON file extraction | Exact |
+| 4 | Figma DS variables | Exact |
+| 5 | URL extraction (curl) | High |
+| 6 | Screenshot inference | Approximate |
+| 7 | Agent defaults (gap handling) | Fallback |
 
-### Source Priority (Merge Order)
+### Process
 
-When multiple sources provide values for the same token, the highest-priority source wins:
+1. Start with all tokens as `{PLACEHOLDER}`
+2. Apply highest-priority source → mark filled tokens as **LOCKED**
+3. Apply next source → fill remaining `{PLACEHOLDER}` only, skip LOCKED
+4. Repeat for all sources
+5. Screenshot for remaining gaps → mark as APPROXIMATE
+6. Gap handling (Section 11) for anything still unresolved
 
-| Priority | Source | Trust Level | Notes |
-|---|---|---|---|
-| 1 (highest) | **User-provided explicit values** | Exact | Always trust — user knows their brand |
-| 2 | **Product token file** (.md) | Exact | Pre-authored by the team |
-| 3 | **CSS/JSON file extraction** | Exact | Parsed from actual code |
-| 4 | **Figma design system variables** | Exact | From the team's design system |
-| 5 | **URL extraction** (curl) | High | May be incomplete if site blocks |
-| 6 | **Screenshot inference** | Approximate | Color picker gives hex values; font/spacing are estimates |
-| 7 (lowest) | **Agent defaults** (from gap handling) | Fallback | Only when nothing else is available |
+### Screenshot Inference Rules
 
-### Resolution Process
+Colors: extractable (high accuracy). Font family: partial (medium). Font sizes: partial (low). Spacing: use defaults. Radius: nearest 4/8/12/16px. Shadows: sm/md/lg estimate.
 
-```
-1. Start with an empty token set (all 97+ tokens as {PLACEHOLDER})
+Mark all screenshot values with `(from screenshot — approximate)`. On conflict with other source, ask user.
 
-2. Apply highest-priority source first:
-   - If user provided explicit values → apply them to matching tokens
-   - Mark these tokens as LOCKED — lower-priority sources cannot override
+### Report
 
-3. Apply next-priority available source:
-   - For each remaining {PLACEHOLDER} token, fill from this source
-   - Skip any LOCKED tokens
-
-4. Repeat for all available sources in priority order
-
-5. For any remaining {PLACEHOLDER} tokens:
-   - If a screenshot is available → use color picker / visual estimation
-   - Mark screenshot-derived values as APPROXIMATE in the token record
-
-6. Apply gap handling (Section 11) for anything still unresolved
-```
-
-### Screenshot-Based Inference Rules
-
-When inferring tokens from a screenshot, the agent can extract:
-
-| Token Category | Extractable? | Method | Accuracy |
-|---|---|---|---|
-| Colors (primary, CTA, text, bg) | **Yes** | Color-pick from screenshot regions | High — hex values are exact from color picker |
-| Font family | **Partial** | Visual matching against known fonts | Medium — sans-serif vs serif is clear, exact family is a guess |
-| Font sizes | **Partial** | Estimate from screenshot proportions | Low — depends on zoom level and resolution |
-| Spacing values | **No** | Cannot determine exact pixel values | Use defaults from token-values.md |
-| Border radius | **Partial** | Visual estimate (sharp, subtle, rounded) | Low — use nearest standard value (4px, 8px, 12px, 16px) |
-| Shadows | **Partial** | Visible/not visible, approximate spread | Low — use standard shadow-sm/md/lg |
-
-**Rules for screenshot inference:**
-- Always mark screenshot-derived values in the Build Card with `(from screenshot — approximate)`
-- When color-picking, sample from the largest, most representative area (e.g., button fill for CTA, page background for bg-page)
-- Never infer font-family from a screenshot alone if the user provided a CSS file or other text-based source — those are more reliable
-- If the screenshot and another source conflict on a color, ask the user before proceeding
-
-### Hybrid Resolution Report
-
-After merging, produce a source attribution report:
-
-```markdown
-## Token Resolution Report — Hybrid
-
-**Sources used (in priority order):**
-1. User-provided: color-primary, color-cta, font-heading
-2. CSS file: font-body, font-size-*, spacing-*, radius-*
-3. Screenshot: color-bg-page, color-text-primary, tint colors (approximate)
-4. Defaults: shadow-*, semantic colors
-
-**Source attribution:**
-| Token | Value | Source | Confidence |
-|---|---|---|---|
-| color-primary | #E9142B | User-provided | Exact |
-| color-cta | #FF6A00 | User-provided | Exact |
-| color-bg-page | #FFFFFF | Screenshot | High |
-| font-heading | Lato Bold | User-provided | Exact |
-| tint-1-surface | #F5F7FA | Screenshot | Approximate |
-| shadow-md | 0 2px 8px rgba(0,0,0,0.12) | Default | Fallback |
-
-**Tokens still unresolved:** {count} — see Gap Report below
-```
-
-Present this to the user so they can verify approximate values before proceeding.
+After merging, produce source attribution: token → value → source → confidence. Present to user for verification before proceeding.
 
 ---
 
 ## 11 — Gap Handling
 
-After extraction, some canonical tokens will remain as `{PLACEHOLDER}`. The agent handles gaps as follows:
-
-### Gap Severity
-
-| Gap Type | Severity | Action |
+| Gap | Severity | Fallback |
 |---|---|---|
-| `color-primary` missing | Critical | Stop — cannot generate CTAs without the primary color. Ask user to provide. |
-| `font-heading` or `font-body` missing | High | Proceed with system font stack fallback (`-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`). Flag in output. See Section 9 for full fallback chain. |
-| `font-size-*` missing | High | Proceed with browser defaults + type scale ratios. Flag in output. |
-| `section-padding-y` missing | Medium | Proceed with `space-2xl` as fallback. Flag in output. |
-| `color-text-primary` missing | Medium | Proceed with `#1A1A1A` as fallback. Flag in output. |
-| `color-bg-page` missing | Medium | Proceed with `#FFFFFF` as fallback. Flag in output. |
-| `tint-*` colors missing | Medium | Proceed without tinted sections — all sections use default background. Flag in output. |
-| Spacing scale incomplete | Low | Proceed — derive missing scale steps from available values using ratio. Flag in output. |
-| `shadow-*` missing | Low | Proceed with `shadow-none` as fallback. Flag in output. |
-| Semantic colors (`color-success`, etc.) missing | Low | Proceed with conventional defaults (#2E7D32, #F57C00, #C62828, #1565C0). Flag in output. |
+| `color-primary` | Critical | Stop — ask user |
+| `font-heading` / `font-body` | High | System font stack. See §9 fallback chain |
+| `font-size-*` | High | Browser defaults + type scale ratios |
+| `section-padding-y` | Medium | `space-2xl` |
+| `color-text-primary` | Medium | `#1A1A1A` |
+| `color-bg-page` | Medium | `#FFFFFF` |
+| `tint-*` colors | Medium | No tinted sections |
+| Spacing scale | Low | Derive from available values |
+| `shadow-*` | Low | `shadow-none` |
+| Semantic colors | Low | #2E7D32 / #F57C00 / #C62828 / #1565C0 |
 
-### Gap Report Format
-
-After extraction, produce a gap summary:
-
-```
-## Token Extraction Gap Report
-
-**Source:** {source type}
-**Extracted:** {n} / 97 tokens
-**Remaining gaps:** {n} tokens
-
-### Critical
-- [ ] color-primary — not found in source
-
-### High
-- [ ] font-heading — not found; using system font fallback
-
-### Medium
-- [ ] tint-1, tint-2, tint-3, tint-4 — not found; tinted sections disabled
-
-### Low
-- [ ] shadow-sm, shadow-md, shadow-lg — not found; using shadow-none fallback
-```
-
-Present this report to the user before proceeding with design decisions, so they can fill critical and high gaps if needed.
+**Gap report:** Present `Critical → High → Medium → Low` breakdown with counts before proceeding, so user can fill critical/high gaps.

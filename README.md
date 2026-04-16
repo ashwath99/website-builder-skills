@@ -1,20 +1,21 @@
-# Website Builder Skills v5.0
+# Website Builder Skills v5.3
 
 A modular skill file system that enables AI agents to convert marketing content briefs into Figma design frames and/or production-ready landing page code.
 
 Built for **Claude Code**, **Cursor AI**, **VS Code / GitHub Copilot**, **Antigravity (Google)**, **Codex CLI**, and **Gemini CLI**.
 
-> **Current version:** 5.0 — Restructured to the [Agent Skills specification](https://docs.anthropic.com) (SKILL.md format).
+> **Current version:** 5.3.0 — Compression release. All major skill files compressed 40–74% to improve builder signal-to-noise ratio. Three new features added.
 
 ---
 
-## What's New in v5.0
+## What's New in v5.3
 
-- **SKILL.md format** — Every skill now follows the universal Agent Skills specification with YAML frontmatter (`name`, `description`, `version`), making them discoverable and loadable across all major AI coding agents.
-- **Independent skill directories** — Each skill lives in its own folder with a `SKILL.md` entry point and optional reference files for overflow content.
-- **Ownership-based naming** — Skills are named by what they own: `brief-parser`, `design-tokens`, `component-library`, etc.
-- **Progressive disclosure** — SKILL.md files stay under 500 lines; detailed specs overflow into reference files one level deep.
-- **Cross-IDE compatibility** — Works with Claude Code, Cursor AI, VS Code, Antigravity, Codex CLI, and Gemini CLI.
+- **40–74% compression** across 6 major skill files — removes prose explanations, keeps all code blocks, tables, and rules. Addresses the "docs ceiling" where builders cherry-pick from long files.
+- **Direct CSS file source** (`token-sources.md` Source 3b) — skip fetch when CSS file is provided directly.
+- **Font fallback lookup table** (`token-sources.md` §9) — geometric sans → Inter/Lato, humanist → Open Sans, serif → Merriweather, etc.
+- **Token priority levels** (`token-values.md`) — P1 (must extract), P2 (extract if available), P3 (always use default). Focuses extraction effort on the 15 tokens that matter most.
+- **Programmatic verification script** (`figma-code-patterns.md` §12) — checks section heights, grid sizing, button heights, FILL-without-autolayout, text overflow.
+- **Slim Build Card** — compressed from ~60 lines to ~30 lines based on builder feedback (only page name, frame ID, fonts, colors, and section plan were actually used).
 
 ---
 

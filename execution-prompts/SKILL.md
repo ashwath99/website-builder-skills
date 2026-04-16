@@ -1,41 +1,32 @@
 ---
 name: execution-prompts
 description: Master prompt templates for executing the landing page pipeline through AI coding agents. Contains Mode A/B/C templates, shared preamble, Page Blueprint format, prompt modifiers, and validation checklists. Use when starting any execution mode, writing agent prompts, or validating output.
-version: "5.2.1"
+version: "5.3.0"
 ---
 
 # Agent Execution Prompt — Master Templates
 
-This file contains prompt templates for all three execution modes across all supported agents. It is the orchestration layer — it references every other skill file but defines none of their content.
+Orchestration layer — references every other skill file but defines none of their content.
 
-→ For pipeline and mode definitions: see `pipeline-workflow/SKILL.md`
-→ For all other skill file content: see the respective files referenced in each mode's required file list
+→ Pipeline/mode definitions: `pipeline-workflow/SKILL.md`
 
 ---
 
 ## 1 — Execution Modes
 
-| Mode | Pipeline | Input | Output | When to Use |
-|---|---|---|---|---|
-| **A: Brief → Figma** | Parse brief → select layout → map components → search design system → generate Figma frame → self-healing loop | Content brief + skill files | Figma design frame | Design review needed before code |
-| **B: Figma → Code** | Inspect Figma via `get_design_context` → extract specs → generate production code | Figma dev link + skill files | `index.html`, `styles.css`, `script.js` | Finalized Figma frame exists |
-| **C: Brief → Code** | Parse brief → select layout → map components → generate code directly | Content brief + skill files | Page Blueprint + `index.html`, `styles.css`, `script.js` | Speed matters, Figma review unnecessary |
+| Mode | Input → Output | When to Use |
+|---|---|---|
+| **A: Brief → Figma** | Content brief → Figma design frame | Design review needed before code |
+| **B: Figma → Code** | Figma dev link → `index.html`, `styles.css`, `script.js` | Finalized Figma frame exists |
+| **C: Brief → Code** | Content brief → Page Blueprint + HTML/CSS/JS | Speed matters, Figma unnecessary |
 
-**Combined workflows:**
-- **A → correct → B:** Mode A, manual Figma edits, then Mode B against corrected frame
-- **C → iterate:** Mode C, review in browser, iterate on blueprint + code
-- **C → A (structured):** Escalate Mode C blueprint into a structured Figma frame via `use_figma`
-- **C → Figma (quick visual):** Push Mode C HTML into Figma as editable layers via `generate_figma_design`
-- **C → Figma → correct → B:** Quick visual to Figma, correct, then Mode B for final code
-- **C → A → correct → B:** Full loop from quick draft to polished output
+**Combined:** A → correct → B | C → iterate | C → A (structured) | C → Figma (quick visual) | C → Figma → correct → B | C → A → correct → B
 
-→ Full workflow definitions: see `pipeline-workflow/SKILL.md`
+→ Full workflow definitions: `pipeline-workflow/SKILL.md`
 
 ---
 
 ## 2 — Shared Preamble (All Modes)
-
-Every execution prompt begins with this context block. Copy and adapt for the specific task.
 
 ```
 I am a UX designer.
@@ -52,235 +43,145 @@ Read the skill files in the project folder:
 Product class prefix: {product}
 ```
 
-**Optional additions to the preamble (include when relevant):**
-
-```
-Trend Adaptation Brief: {filename}       ← if trend-adapter/SKILL.md was used
-Variation Spec: {filename}               ← if variation-explorer/SKILL.md was used; specify selected variant
-```
+Optional additions: `Trend Adaptation Brief: {filename}` | `Variation Spec: {filename}`
 
 ---
 
 ## 3 — Mode A: Brief → Figma
 
-### Purpose
-Parse a marketing content brief and generate a complete landing page as a Figma design frame.
+### Required Skill Files (read ALL before any Figma calls, IN THIS ORDER)
 
-### Required Skill Files (MUST read ALL before any Figma calls)
+1. `figma-frame-builder/SKILL.md` — **MUST-READ-FIRST.** Skipping costs 30–40% of build time in debugging.
+2. `figma-frame-builder/figma-code-patterns.md` — Copy-paste code snippets
+3. `figma-frame-builder/layout-code-templates.md` — Layout-specific Figma code
+4. Then: `pipeline-workflow`, `brief-parser`, `design-tokens`, `component-library`, `layout-patterns`
 
-**CRITICAL — Read order matters. The agent MUST read these files in this order before making any `use_figma` call:**
-
-1. `figma-frame-builder/SKILL.md` — Figma runtime rules, API pitfalls, frame construction patterns, batching strategy. **This file prevents the most common build failures. Skipping it costs 30–40% of build time in debugging.**
-2. `figma-frame-builder/figma-code-patterns.md` — Copy-paste code snippets for every frame operation
-3. `figma-frame-builder/layout-code-templates.md` — Layout-specific Figma code templates
-
-Then the standard pipeline files: `pipeline-workflow/SKILL.md`, `brief-parser/SKILL.md`, `design-tokens/SKILL.md`, `component-library/SKILL.md`, `layout-patterns/SKILL.md`
-
-### MCP Requirements
-Remote Figma MCP server connected (`mcp.figma.com/mcp`), `/figma-use` skill installed.
+MCP: Remote Figma MCP server + `/figma-use` skill required.
 
 ### Prompt Template
 
 ```
 [Shared Preamble — Section 2]
 
-BEFORE ANY FIGMA CALLS — read these three files first (they contain critical API rules
-that prevent the most common build failures):
-- figma-frame-builder/SKILL.md          → Figma runtime rules, API pitfalls, batching
-- figma-frame-builder/figma-code-patterns.md  → Code snippets for every frame operation
-- figma-frame-builder/layout-code-templates.md → Layout-specific Figma code
+BEFORE ANY FIGMA CALLS — read these three files first:
+- figma-frame-builder/SKILL.md
+- figma-frame-builder/figma-code-patterns.md
+- figma-frame-builder/layout-code-templates.md
 
 Content Brief: {brief-filename}
-{Attach any reference images: hero images, product screenshots, etc.}
+{Attach any reference images}
 
 Using these skill files:
-1. Parse the brief using brief-parser/SKILL.md — confirm sections and flag any content gaps
-2. Infer the page type and select layout types from layout-patterns/SKILL.md for this content and audience
-3. Map each content section to components from component-library/SKILL.md
+1. Parse the brief using brief-parser/SKILL.md — confirm sections and flag gaps
+2. Infer page type and select layouts from layout-patterns/SKILL.md
+3. Map content to components from component-library/SKILL.md
 4. Apply design tokens from design-tokens/SKILL.md
-5. Search the connected design system for reusable components before creating new ones
-6. Write the Build Card to a file (MANDATORY — see Build Card section below)
+5. Search design system for reusable components
+6. Write the Build Card to file (MANDATORY — see Build Card section below)
 
 Generate the landing page as a Figma design frame using use_figma
 (invoke the /figma-use skill before each call).
 Target Figma file: {figma-file-url}
 
-Run the self-healing verification loop after generation:
+Run self-healing verification after generation:
 programmatic checks + screenshot → compare → fix → repeat (max 3 iterations).
 
 START — Deploy Figma design
 ```
 
-### What the Agent Does
-1. **Reads Figma skill files FIRST** — `figma-frame-builder/SKILL.md`, `figma-code-patterns.md`, `layout-code-templates.md` (these contain API rules that prevent 30–40% of build failures)
-2. Reads remaining skill files (pipeline-workflow, brief-parser, design-tokens, component-library, layout-patterns)
-3. Confirms MCP server connection and `/figma-use` skill availability
-4. Discovers MCP tool prefix (see `figma-frame-builder/SKILL.md` Section 1)
-5. Parses the content brief — identifies sections, flags gaps, classifies audience
-6. Infers page type and selects layout types — reads content signals from parsed brief, maps to page type, assigns section layout types from `layout-patterns/SKILL.md`
-7. Maps content to components — assigns each section a component from `component-library/SKILL.md`
-8. Searches design system for existing library components to reuse (max 3 calls)
-9. Resolves design tokens — applies values from `design-tokens/SKILL.md`, binds to Figma variables when available
-10. **Writes the Build Card to a file** (MANDATORY — see below)
-11. Pushes the assembled frame to Figma via `use_figma` following `figma-frame-builder/SKILL.md` rules
-12. Runs self-healing loop — programmatic checks + screenshots, compares, fixes until passing or max iterations
-
 ### Scope
-Mode A generates a **desktop-only** (1440px) frame. Mobile and tablet breakpoints are out of scope. If responsive variants are needed, the user should:
-- Create separate frames at 768px (tablet) and 375px (mobile) manually, OR
-- Use Mode C to generate responsive HTML/CSS which handles breakpoints in code
+
+Desktop-only (1440px). No mobile/tablet breakpoints. For responsive, use Mode C.
 
 ### Placeholder Content Tagging
 
-Not all text in the generated frame comes from the brief. Some content must be fabricated (testimonial quotes, specific stat numbers, person names). The agent must clearly mark what's real vs. fabricated:
+- Layer names: append `[placeholder]` — e.g., `Testimonial: Jane Doe, Acme Corp [placeholder]`
+- Text content: wrap in curly braces — e.g., `{99.9% Uptime SLA}`
+- Post-generation report must list all fabricated content with a "Fabricated Content" section.
+- **Rule:** Brief content = real. Agent-generated fill content = fabricated, always tagged.
 
-**Naming convention for fabricated content:**
-- Frame layer names: append `[placeholder]` suffix — e.g., `Testimonial: Jane Doe, Acme Corp [placeholder]`
-- Text content: wrap fabricated strings in curly braces — e.g., `{99.9% Uptime SLA}`
+### Build Card (MANDATORY)
 
-**In the post-generation report, include a Fabricated Content section:**
-```markdown
-## Fabricated Content (requires user review)
-- Testimonial quotes: 3 quotes with fabricated names and companies
-- Statistics: "99.9% Uptime SLA", "500K+ Endpoints" (numbers not from brief)
-- CTA secondary text: "No credit card required" (not in brief)
-```
-
-**Rule:** Content directly from the brief is always real. Content the agent generates to fill gaps (social proof, statistics, secondary copy) is always fabricated and must be tagged.
-
-### Post-Execution
-- Review the generated Figma frame
-- Make manual corrections if needed — check fabricated content markers for accuracy
-- If proceeding to code: run Mode B against the corrected frame
-
-### Build Phase Quick Reference Card (MANDATORY)
-
-**Context window pressure is real.** Reading 8–10 skill files (200–400 lines each) plus the brief plus token-values.md can consume 40%+ of context before the build even starts. After the preparation phase (steps 1–9 above), the agent MUST write a Build Card to a file and use it as the primary reference during the build phase.
-
-**This is not optional.** The Build Card must be written to a file (`{product}-build-card.md`) — not kept in-context only. When context compacts, in-context cards are summarized and degraded, but a file persists and can be re-read. The card must be updated after each batch with new node IDs.
-
-**Write this card to `{product}-build-card.md` after token extraction and brief parsing, before the first `use_figma` call:**
+**Context pressure is real.** 8–10 skill files can consume 40%+ of context. After preparation, the agent MUST write a Build Card to `{product}-build-card.md` — not in-context only. Update after each batch with new node IDs.
 
 ```markdown
 # Build Card — {Product Name}
 
-## Figma Target
-- File: {figma-file-url}
-- Page: {page-name}
-- MCP prefix: {discovered prefix, e.g., mcp__Figma__}
+## Target
+File: {url} | Page: {page-name} | MCP prefix: {prefix}
 
-## Resolved Fonts
-- Heading: {font-family} {styles available}
-- Body: {font-family} {styles available}
-- (Fallback applied: yes/no — original was {original-font})
+## Fonts
+Heading: {family} {styles} | Body: {family} {styles}
+Fallback applied: yes/no (original: {font})
 
-## Resolved Colors (0-1 range for Figma)
-- Primary: r={R} g={G} b={B} | hex={HEX}
-- CTA: r={R} g={G} b={B} | hex={HEX}
-- CTA hover: r={R} g={G} b={B} | hex={HEX}
-- Text primary: r={R} g={G} b={B}
-- Text secondary: r={R} g={G} b={B}
-- BG page: r={R} g={G} b={B}
-- BG surface: r={R} g={G} b={B}
-- Tint-1 surface: r={R} g={G} b={B} | border: r={R} g={G} b={B}
-- Tint-2 surface: r={R} g={G} b={B} | border: r={R} g={G} b={B}
+## Colors (hex → 0-1 for Figma)
+| Token | Hex | R | G | B |
+|---|---|---|---|---|
+| primary | {HEX} | {R} | {G} | {B} |
+| cta | {HEX} | {R} | {G} | {B} |
+| cta-hover | {HEX} | {R} | {G} | {B} |
+| text-primary | {HEX} | {R} | {G} | {B} |
+| text-secondary | {HEX} | {R} | {G} | {B} |
+| bg-page | {HEX} | {R} | {G} | {B} |
+| bg-surface | {HEX} | {R} | {G} | {B} |
+| tint-1-surface | {HEX} | {R} | {G} | {B} |
+| tint-1-border | {HEX} | {R} | {G} | {B} |
 
-## Spacing (px)
-- Section padding Y: {N}
-- Grid gutter: {N}
-- Card padding: {N}
-- Content max-width: {N}
-- Space scale: xs={N} sm={N} md={N} lg={N} xl={N}
+## Spacing
+Section padding Y: {N} | Grid gutter: {N} | Card padding: {N} | Content max-width: {N}
 
 ## Elevation
-- Shadow MD: {value} (remember blendMode: 'NORMAL')
-- Radius MD: {N}px
+Shadow MD: blendMode NORMAL, offset 0/{N}, radius {N} | Radius MD: {N}px
 
 ## Section Plan
-| # | Section Type | Layout | Tint | Component | Min-Height |
+| # | Type | Layout | Tint | Component | Min-H |
 |---|---|---|---|---|---|
-| 1 | Hero | split-50 | none | Hero: Split Image | 500px |
-| 2 | Trust Signals | logo-bar | tint-1 | Logo Bar | 200px |
-| 3 | Feature Grid | grid-3col | none | Feature Card ×6 | 300px |
+| 1 | Hero | split-50 | none | Hero: Split Image | 500 |
 | ... | ... | ... | ... | ... | ... |
 
-## Batching Plan
-- Batch 1: Main frame + sections 1-2 → returns {mainFrameId}
-- Batch 2: Sections 3-4
-- Batch 3: Sections 5-6
-- Batch 4: Sections 7-9
-- Batch 5: Verification + fixes
+## Batching
+Batch 1: Main frame + sections 1-2 → Batch 2: 3-4 → ... → Final: Verify
 
-## DS Components to Import
-- Button Primary: key={key} (or: build from primitives)
-- (list any others found via search_design_system)
+## Frame-Finder
+Page: "{page-name}" | Main frame ID: {fill after Batch 1}
 
-## Frame-Finder Preamble
-Page: "{page-name}" | Main frame ID: {to be filled after Batch 1}
-
-## Asset Placeholders
-- Hero: gray rect 1440×500 labeled "Hero Screenshot"
-- Feature icons: gray circles 48×48 labeled per feature
-- Logos: gray rects 120×40 per company
+## DS Components
+{key: description, or "build from primitives"}
 ```
-
-**Rules:**
-- This card replaces the need to re-read full skill files during the build phase
-- **Update the file after each batch** with new node IDs, section IDs, and any corrections
-- After Batch 1 completes, immediately update the Main Frame ID field
-- If context compacts mid-build, re-read this file to recover all state
 
 ### Session Recovery Protocol
 
-When context compacts mid-build (long conversations, large sessions), the agent loses in-context state. This protocol prevents the most common post-compaction failure: creating a duplicate frame.
+On resuming after context compaction:
 
-**On resuming after context compaction:**
-
-1. **Re-read the Build Card file** (`{product}-build-card.md`) — this has all node IDs, colors, fonts, and the section plan
-2. **Look up the main frame by ID, NEVER by name** — `figma.getNodeById("{MAIN_FRAME_ID}")`. Name-based search (`findOne(n => n.name === ...)`) will find the wrong frame if duplicates exist
-3. **Verify frame integrity** — count the child sections in the main frame. Compare against the Build Card's section plan to determine which batches completed successfully
-4. **Resume from the next incomplete batch** — don't restart from scratch
-
-**Recovery code (paste at top of first `use_figma` call after resuming):**
+1. Re-read `{product}-build-card.md`
+2. Look up main frame **by ID, NEVER by name** — `figma.getNodeById("{MAIN_FRAME_ID}")`
+3. Count child sections, compare against Build Card section plan
+4. Resume from next incomplete batch
 
 ```javascript
-// === Session Recovery — verify frame integrity ===
+// === Session Recovery ===
 const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
 await figma.setCurrentPageAsync(targetPage);
-
 const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
 if (!mainFrame) return { error: "Main frame {MAIN_FRAME_ID} not found — may need to rebuild" };
-
 const sections = mainFrame.children.map(c => ({ id: c.id, name: c.name, height: c.height }));
 return {
-  frameId: mainFrame.id,
-  frameName: mainFrame.name,
-  sectionCount: sections.length,
-  sections: sections,
+  frameId: mainFrame.id, sectionCount: sections.length, sections,
   summary: "Frame integrity check — compare section count against Build Card"
 };
-// === End Recovery ===
 ```
 
-**Critical rule:** If `getNodeById` returns null for the stored main frame ID, the frame was deleted or the ID is stale. Check the Build Card for the Figma file URL, open it, and verify. Do NOT create a new frame without confirming the old one is gone.
+**If `getNodeById` returns null:** frame was deleted or ID is stale. Verify in Figma before creating a new frame.
 
 ---
 
 ## 4 — Mode B: Figma → Code
 
-### Purpose
-Take a finalized Figma design and generate production-ready HTML/CSS/JS.
+Required files: `pipeline-workflow`, `design-tokens`, `component-library`, `figma-code-extractor`, `html-generator`, `css-js-generator`
 
-### Required Skill Files
-`pipeline-workflow/SKILL.md`, `design-tokens/SKILL.md`, `component-library/SKILL.md`, `figma-code-extractor/SKILL.md`, `html-generator/SKILL.md`, `css-js-generator/SKILL.md`
+MCP: Remote Figma MCP server required.
 
-### MCP Requirements
-Remote Figma MCP server connected.
-
-### Critical Rule: Figma Link Is Sole Source of Truth
-If Mode B follows a Mode A run (with or without manual corrections), the agent MUST treat the Figma dev link as the only source of truth. Any design decisions, layout plans, or component mappings from a prior Mode A session (or earlier in the same session) are discarded. The agent inspects the frame fresh — what's in Figma is what gets built, nothing else.
-
-This ensures that manual corrections made between Mode A and Mode B are always respected.
+**Critical Rule:** Figma link is sole source of truth. Discard any prior Mode A decisions — inspect the frame fresh.
 
 ### Prompt Template
 
@@ -295,54 +196,32 @@ Also read:
 Figma Dev Link: {figma-dev-link-with-node-id}
 
 Additional context:
-- Pre-exported assets are in the project assets folder: {list any pre-exported images}
-- Export any remaining icons/images I missed from the Figma frame
+- Pre-exported assets in project assets folder: {list}
+- Export any remaining icons/images from the Figma frame
 - Compress all assets without affecting visual quality
 
-Execute the Figma-to-Code pipeline defined in figma-code-extractor/SKILL.md:
-Phase 1: Inspect — Extract specs using get_design_context; extract variables via use_figma Plugin API script
-Phase 2: Plan — Map Figma layers to HTML structure and CSS architecture
-Phase 3: Generate — Produce index.html, styles.css, script.js
-Phase 4: Self-review — Validate output against skill file rules
+Execute the Figma-to-Code pipeline in figma-code-extractor/SKILL.md:
+Phase 1: Inspect — Extract specs via get_design_context + use_figma variables
+Phase 2: Plan — Map layers to HTML/CSS
+Phase 3: Generate — index.html, styles.css, script.js
+Phase 4: Self-review
 
-Use variable names from get_design_context style references and use_figma
-variable extraction as the basis for CSS custom property naming where available.
-
-Output: 3 files in the project output folder
+Output: 3 files in project output folder
 START
 ```
 
-### What the Agent Does
-1. Connects to Figma via remote MCP server and inspects the dev link (fresh inspection — no prior assumptions)
-2. Extracts all design specs via `get_design_context` following `figma-code-extractor/SKILL.md` Phase 1
-3. Extracts token values via `use_figma` Plugin API variable extraction script
-4. Identifies library components via `search_design_system`
-5. Identifies and exports missing assets, compresses all assets
-6. Plans HTML/CSS mapping following `figma-code-extractor/SKILL.md` Phase 2
-7. Generates 3 files following `html-generator/SKILL.md` and `css-js-generator/SKILL.md`
-8. Self-reviews following `figma-code-extractor/SKILL.md` Phase 4
-9. Optionally pushes generated HTML to Figma via `generate_figma_design` for visual comparison
-
 ### Asset Handling
-- Agent checks the project assets folder first for pre-exported files
-- Exports missing assets from Figma via `use_figma`
-- Compresses all assets (SVG optimization, PNG/JPG compression)
-- References as `./assets/{filename}` with TODO comments for uncertain mappings
+Agent checks project assets folder first → exports missing from Figma → compresses all → references as `./assets/{filename}`.
 
-→ Full asset export rules: see `figma-code-extractor/SKILL.md` Section 3, Step 6
+→ Full rules: `figma-code-extractor/SKILL.md` Section 3, Step 6
 
 ---
 
 ## 5 — Mode C: Brief → Code
 
-### Purpose
-Go directly from a content brief to production code, skipping Figma. Produces a Page Blueprint as the persistent source of truth.
+Required files: `pipeline-workflow`, `brief-parser`, `design-tokens`, `component-library`, `layout-patterns`, `html-generator`, `css-js-generator`
 
-### Required Skill Files
-`pipeline-workflow/SKILL.md`, `brief-parser/SKILL.md`, `design-tokens/SKILL.md`, `component-library/SKILL.md`, `layout-patterns/SKILL.md`, `html-generator/SKILL.md`, `css-js-generator/SKILL.md`
-
-### MCP Requirements
-None — Mode C does not touch Figma unless escalating.
+MCP: None (unless escalating to Figma).
 
 ### Prompt Template
 
@@ -354,167 +233,89 @@ Also read:
 - css-js-generator/SKILL.md  → CSS/JS output rules
 
 Content Brief: {brief-filename}
-{Attach any reference images: hero images, product screenshots, etc.}
+{Attach any reference images}
 
-Using these skill files, execute the full pipeline from brief to production code:
+Execute full pipeline:
+1. Parse brief → confirm sections, flag gaps
+2. Infer page type → select layouts
+3. Map content → components
+4. Apply design tokens
+5. Write Page Blueprint as {product}-blueprint.md
+6. Generate code per html-generator + css-js-generator
 
-1. Parse the brief using brief-parser/SKILL.md — confirm sections and flag gaps
-2. Infer page type and select layout types from layout-patterns/SKILL.md
-3. Map content to components from component-library/SKILL.md
-4. Apply design tokens from design-tokens/SKILL.md
-5. Write the Page Blueprint as {product}-blueprint.md
-6. Generate production code following html-generator/SKILL.md and css-js-generator/SKILL.md
-
-Output: {product}-blueprint.md + index.html, styles.css, script.js in the project output folder
-Asset references: ./assets/ with TODO flags for all image placeholders
-
-START — Generate landing page code
+Output: {product}-blueprint.md + index.html, styles.css, script.js
+START
 ```
-
-### What the Agent Does
-1. Reads all skill files
-2. Parses the content brief — same as Mode A
-3. Makes all design decisions and records them in the Page Blueprint (Section 5.1)
-4. Saves the blueprint as `{product}-blueprint.md` in the project folder
-5. Generates HTML, CSS, JS from the blueprint — same quality as Mode B output
-6. Self-reviews against all skill file rules
 
 ### 5.1 — Page Blueprint Format
 
-Since Mode C has no Figma frame, the blueprint serves as the persistent, editable source of truth — the text equivalent of a Figma frame.
+The blueprint is Mode C's persistent source of truth (equivalent of a Figma frame).
 
 ```markdown
 # Page Blueprint: {Product Name} Landing Page
 
-**Brief:** {brief-filename}
-**Generated:** {YYYY-MM-DD}
-**Class prefix:** {product}-
-**Trend profile:** {profile name or "Default"}
-**Variant:** {variant name or "N/A"}
+**Brief:** {filename} | **Generated:** {date} | **Prefix:** {product}- | **Trend:** {profile}
 
 ---
 
 ## Page Structure
 
 ### Section 1: Hero
-- **Component:** {component name from component-library/SKILL.md}
-- **Variant:** {component variant}
-- **Layout:** {pattern from layout-patterns/SKILL.md}
-- **Content:** {headline, subheadline, CTA text — actual copy from brief}
-- **Image:** {asset reference or placeholder path}
-- **Tokens:** {hero height, background color, text alignment}
-
-### Section 2: {Section Name}
-- **Component:** ...
-- **Variant:** ...
-- **Layout:** ...
-- **Content:** ...
-- **Tokens:** ...
+- **Component/Variant:** {name} / {variant}
+- **Layout:** {pattern}
+- **Content:** {headline, subheadline, CTA text}
+- **Image:** {asset ref or placeholder}
+- **Tokens:** {hero height, bg color, text alignment}
 
 [...repeat for all sections]
 
 ---
 
 ## Token Values Applied
-
 ` ``css
-/* Key token decisions for this page */
 --{product}-hero-height: 90vh;
 --{product}-space-section: 80px;
---{product}-feature-columns: 3;
---{product}-radius-md: 12px;
 /* ...all non-default values */
 ` ``
 
 ## Interaction Patterns
-- {e.g., "Feature tabs: jQuery tab switcher per css-js-generator/SKILL.md Section 7.2"}
-- {e.g., "Scroll animation: fade-up per css-js-generator/SKILL.md Section 7.4"}
+- {e.g., "Feature tabs: jQuery tab switcher per css-js-generator §7.2"}
 
 ## Asset Manifest
 
-### Content Images (supplied by user — never agent-generated)
 | Filename | Description | Source | Status |
 |---|---|---|---|
-| hero-dashboard.png | Product screenshot for hero | Brief attachment | Available |
-| customer-logo-1.png | Partner/customer logo | Brief attachment | Available |
-
-### Icons & Illustrations (require sourcing decision)
-| Filename | Description | Method | Status |
-|---|---|---|---|
-| feature-icon-monitoring.svg | Server monitoring icon | Inline SVG (simple shape) | Agent will generate in code |
-| feature-illustration-workflow.svg | Complex workflow diagram | Manual supply needed | TODO — add to ./assets/ |
-
-### CSS-Only Graphics (no files needed)
-| Element | Implementation |
-|---|---|
-| Section backgrounds | Gradient or solid via CSS custom properties |
-| Section dividers | clip-path or border — defined in tokens |
-| Card shadows/borders | box-shadow and border via component tokens |
+| hero-dashboard.png | Hero screenshot | Brief | Available |
+| feature-icon-*.svg | Feature icons | Inline SVG | Agent generates |
 ```
 
-### Blueprint Usage Rules
+### Blueprint Rules
 
-**During initial generation:** The agent writes the blueprint first, then generates code from it. Code matches the blueprint exactly.
+- **Initial:** Write blueprint first, then generate code from it.
+- **Iteration:** Update blueprint first, then modify code to match.
+- **Session reset:** Point agent to blueprint file as source of truth.
+- **Critical:** Like Mode B's Figma rule — read the current file, not memory of what was generated.
 
-**During iteration:** When changes are requested, the agent updates the blueprint *first*, then modifies code to match. The blueprint always reflects the current state.
+### Escalation Paths
 
-**On session reset:** Point the agent to the blueprint:
+**Path 1: C → A (Structured)**
 ```
-Read the page blueprint: {product}-blueprint.md
-Read skill files: [list]
-Continue from this blueprint — apply the following changes: {edits}
-Update the blueprint and regenerate the affected code files.
-```
-
-**Critical rule:** Same principle as Mode B's Figma rule — when iterating, the agent reads the current blueprint file as source of truth, not its memory of what it generated previously. If the blueprint was manually edited, those changes are respected.
-
-### Escalation Paths from Mode C
-
-**Path 1: Blueprint → Figma Structured Build (C → A)**
-Feed the blueprint into Mode A as a pre-decided spec:
-
-```
-Read the page blueprint: {product}-blueprint.md
-Read skill files: design-tokens/SKILL.md, component-library/SKILL.md, layout-patterns/SKILL.md, figma-frame-builder/SKILL.md
-
-Do not re-analyze or re-decide layout.
-The blueprint is the finalized design spec — generate a Figma frame
-that matches it exactly using use_figma.
-
-Search connected design system for reusable components first.
-Run the self-healing verification loop after generation.
-
-Target Figma file: {figma-file-url}
+Read {product}-blueprint.md
+Read: design-tokens, component-library, layout-patterns, figma-frame-builder
+Do not re-analyze. Blueprint is finalized spec — render as Figma frame exactly.
+Search DS for reusable components. Run self-healing verification.
+Target Figma file: {url}
 START
 ```
 
-The agent skips brief-parsing and decision-making, acts purely as a renderer. Useful when:
-- You iterated in Mode C and now want a visual artifact
-- A stakeholder needs a Figma frame for review
-- You want Figma documentation with structured layers and variable bindings
-
-**Path 2: HTML → Figma Quick Visual (C → Figma)**
-Push Mode C's rendered HTML directly into Figma:
-
+**Path 2: C → Figma (Quick Visual)**
 ```
-The Mode C output (index.html + styles.css + script.js) is ready.
-
-Use generate_figma_design to push the rendered HTML into Figma
-as editable design layers.
-
-Target Figma file: {figma-file-url}
+Use generate_figma_design to push rendered HTML into Figma as editable layers.
+Target Figma file: {url}
 START
 ```
 
-Useful when:
-- You want a fast visual in Figma without building structured frames
-- The goal is quick stakeholder review, not extensive Figma editing
-- You plan to follow up with Mode B against the corrected frame
+**Path 3:** C → Figma → correct → B (quick visual then polish)
+**Path 4:** C → A → correct → B (full structured loop)
 
-**Path 3: Full Escalation (C → Figma → correct → B)**
-Run Mode C → push HTML to Figma via `generate_figma_design` → make manual corrections → run Mode B against corrected frame.
-
-**Path 4: Full Structured Escalation (C → A → correct → B)**
-Run Mode C → escalate blueprint to Figma via `use_figma` (Path 1) → make manual corrections → run Mode B against corrected frame. Full loop from quick draft to polished output.
-
-→ For agent-specific notes, prompt modifiers, and validation checklists: see prompt-templates.md
+→ Agent-specific notes, prompt modifiers, validation checklists: `prompt-templates.md`
