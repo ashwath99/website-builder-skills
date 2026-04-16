@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.1.0"
+version: "5.2.0"
 ---
 
 # Figma Capture — Frame Generation
@@ -123,6 +123,8 @@ This section addresses the single biggest time sink in frame generation: **the P
 | `figma.notify()` throws "not implemented" | Never use — use `return` for status messages |
 | `figma.closePlugin()` must never be called | Code is auto-wrapped — calling it will error |
 | Code must NOT be wrapped in async IIFE | Already auto-wrapped — wrapping again causes errors |
+| `figma.loadAllPagesAsync()` is NOT available | Not a real API method — pages load on demand via `setCurrentPageAsync` |
+| `figma.createPage()` may not be available | Use `figma.root.children` to find existing pages instead of creating new ones |
 
 ### 3.2 — Node ID Persistence (Mandatory)
 
@@ -205,9 +207,11 @@ These are from Figma's official docs — violating any of them causes silent fai
 - Effects arrays are also read-only — clone, modify, reassign like fills/strokes
 
 **Layout sizing (critical for collapsed frames):**
-- `layoutSizingHorizontal/Vertical = 'FILL'` must be set AFTER `parent.appendChild(child)` — setting before throws
+- **`layoutSizingVertical` defaults to `'FIXED'` (100px) on new frames** — this is the #1 cause of collapsed grids and broken buttons. After creating ANY frame with `layoutMode`, explicitly set `primaryAxisSizingMode = 'AUTO'` (hug) or `layoutSizingVertical = 'HUG'` unless you intend a fixed height. Never rely on the default.
+- `layoutSizingHorizontal/Vertical = 'FILL'` must be set AFTER `parent.appendChild(child)` — setting before the node has an auto-layout parent throws a silent error and the value stays `'FIXED'`
 - `resize()` must be called BEFORE setting sizing modes — `resize()` resets them to `FIXED`
-- Correct order: create node → `resize()` → `appendChild()` → set sizing modes
+- Correct order: create node → `resize()` → `layoutMode` → `primaryAxisSizingMode = 'AUTO'` → `appendChild()` → child `layoutSizingHorizontal = 'FILL'`
+- **For text nodes inside auto-layout:** Set `textAutoResize = 'HEIGHT'` + `layoutSizingHorizontal = 'FILL'` AFTER appending to parent — this makes text wrap to parent width and grow vertically. The default `textAutoResize = 'WIDTH_AND_HEIGHT'` causes text to overflow horizontally.
 
 **Text:**
 - `await figma.loadFontAsync({ family, style })` BEFORE any text property change — never skip, never fire-and-forget
@@ -531,6 +535,10 @@ Confirm /figma-use skill is available
 ```
 If either is missing, stop and instruct the user to set up the Figma MCP plugin.
 
+### Step 1b: Check for Existing Build Card (Session Recovery)
+
+Before starting fresh, check if a Build Card file (`{product}-build-card.md`) already exists from a prior session or pre-compaction state. If it does, follow the Session Recovery Protocol in `execution-prompts/SKILL.md` instead of starting from Step 1.
+
 ### Step 2: Search for Existing Components (Structural Only)
 ```
 Call search_design_system → check for reusable structural components
@@ -563,52 +571,177 @@ Walk through sections → assign tint pairs per layout_patterns rules
 
 ### Step 6: Self-Healing Verification Loop
 
-This replaces the single-pass screenshot of v3.0 with an iterative verification cycle.
+This replaces the single-pass screenshot of v3.0 with a two-phase iterative verification cycle: **programmatic checks first** (catches structural issues screenshots miss), then **visual checks** (catches layout/aesthetic issues).
 
 ```
 LOOP (max 3 iterations):
-  1. Take screenshot of the generated frame via use_figma
-  2. Compare screenshot against design spec:
-     - Section order matches layout pattern?
-     - Tinted sections alternate correctly?
-     - Text content is present and complete?
-     - Component spacing looks correct?
-     - No broken layouts or overlapping elements?
-     - **Collapsed frame check** (CRITICAL — see below)
-  3. If mismatches found:
-     - Log each mismatch with description
-     - Fix via use_figma (adjust spacing, reorder, fix text, etc.)
-     - Continue to next iteration
-  4. If all checks pass → exit loop
+  Phase A — Programmatic Checks (via use_figma script):
+    Run the verification script below against the main frame.
+    This catches collapsed frames, sizing errors, and overflow
+    that are invisible in screenshots.
+
+  Phase B — Visual Checks (via screenshot):
+    Take screenshot of the generated frame.
+    Compare against design spec for visual correctness.
+
+  If mismatches found in either phase:
+    Log each issue with description
+    Fix via use_figma
+    Continue to next iteration
+
+  If all checks pass → exit loop
 ```
 
-**Collapsed Frame Detection (mandatory in every iteration):**
+#### Phase A — Programmatic Verification Script
 
-A "collapsed frame" is a section or component that renders with near-zero visible height despite having content inside. This is the most common visual defect and must be checked every iteration.
+Run this `use_figma` script after each build batch and during every verification iteration. It returns a structured report of all issues found.
 
-Detection method:
-1. In the screenshot, check each section — does it occupy visible vertical space proportional to its content?
-2. Any section that appears as a thin strip, blank band, or is visually absent is collapsed
-3. Any card/component within a section that shows only a sliver or no visible content is collapsed
+```javascript
+// === Programmatic Verification Script ===
+const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
+await figma.setCurrentPageAsync(targetPage);
+const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
+if (!mainFrame) return { error: "Main frame not found" };
 
-Fix procedure for collapsed sections:
+const issues = [];
+const MIN_HEIGHTS = {
+  'Hero': 500, 'Feature Grid': 300, 'Feature Row': 300,
+  'Testimonial': 200, 'Logo Bar': 200, 'Metrics Bar': 200,
+  'CTA': 250, 'Pricing': 250, 'FAQ': 200, 'default': 200
+};
+const CARD_MIN_HEIGHTS = {
+  'Feature Card': 150, 'Testimonial Card': 120,
+  'Pricing Card': 200, 'Tab Panel': 200, 'default': 100
+};
+
+function checkNode(node, depth) {
+  if (node.type !== 'FRAME' && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') return;
+
+  // Check 1: Section height vs min-height
+  if (depth === 1 && node.name.startsWith('Section:')) {
+    const sectionType = node.name.replace('Section: ', '');
+    const minH = MIN_HEIGHTS[sectionType] || MIN_HEIGHTS['default'];
+    if (node.height < minH) {
+      issues.push({ node: node.id, name: node.name, issue: 'COLLAPSED_SECTION',
+        actual: node.height, expected: '>= ' + minH });
+    }
+  }
+
+  // Check 2: Card/component height vs min-height
+  if (depth === 2 || depth === 3) {
+    for (const [prefix, minH] of Object.entries(CARD_MIN_HEIGHTS)) {
+      if (prefix !== 'default' && node.name.startsWith(prefix) && node.height < minH) {
+        issues.push({ node: node.id, name: node.name, issue: 'COLLAPSED_CARD',
+          actual: node.height, expected: '>= ' + minH });
+      }
+    }
+  }
+
+  // Check 3: Grid containers must have HUG vertical sizing
+  if (node.name.includes('Grid') && node.layoutMode &&
+      node.primaryAxisSizingMode === 'FIXED') {
+    issues.push({ node: node.id, name: node.name, issue: 'GRID_FIXED_HEIGHT',
+      detail: 'Grid container has FIXED vertical sizing — should be AUTO (HUG)' });
+  }
+
+  // Check 4: Buttons should not exceed 60px height
+  if (node.name.startsWith('Button:') && node.height > 60) {
+    issues.push({ node: node.id, name: node.name, issue: 'OVERSIZED_BUTTON',
+      actual: node.height, expected: '<= 60' });
+  }
+
+  // Check 5: FILL-sized children must be inside auto-layout parents
+  if ((node.layoutSizingHorizontal === 'FILL' || node.layoutSizingVertical === 'FILL') &&
+      node.parent && !node.parent.layoutMode) {
+    issues.push({ node: node.id, name: node.name, issue: 'FILL_WITHOUT_AUTOLAYOUT_PARENT',
+      detail: 'Node has FILL sizing but parent has no layoutMode' });
+  }
+
+  // Recurse into children (limit depth to avoid timeout)
+  if (depth < 4 && 'children' in node) {
+    for (const child of node.children) { checkNode(child, depth + 1); }
+  }
+}
+
+// Check all text nodes for overflow
+function checkTextNodes(node, depth) {
+  if (depth > 4) return;
+  if (node.type === 'TEXT') {
+    if (node.textAutoResize === 'NONE' || node.textAutoResize === 'WIDTH_AND_HEIGHT') {
+      if (node.parent && node.parent.layoutMode) {
+        issues.push({ node: node.id, name: node.name, issue: 'TEXT_MAY_OVERFLOW',
+          detail: 'textAutoResize=' + node.textAutoResize + ' inside auto-layout — should be HEIGHT' });
+      }
+    }
+  }
+  if ('children' in node) {
+    for (const child of node.children) { checkTextNodes(child, depth + 1); }
+  }
+}
+
+for (const child of mainFrame.children) { checkNode(child, 1); }
+checkTextNodes(mainFrame, 0);
+
+return {
+  totalSections: mainFrame.children.length,
+  issueCount: issues.length,
+  issues: issues,
+  passed: issues.length === 0,
+  summary: issues.length === 0
+    ? 'All programmatic checks passed'
+    : issues.length + ' issues found — fix before visual check'
+};
+// === End Verification Script ===
 ```
-1. Read the collapsed frame via get_design_context → check actual height
-2. If height < min-height from Section 4.2/4.3 → collapsed confirmed
-3. Check child layers:
+
+#### Phase B — Visual Checks (via screenshot)
+
+After programmatic checks pass (or after fixing flagged issues), take a screenshot and check:
+
+- Section order matches layout pattern?
+- Tinted sections alternate correctly?
+- Text content is present and readable (not clipped, not overflowing)?
+- Component spacing looks correct?
+- No broken layouts or overlapping elements?
+- All sections occupy visible vertical space proportional to their content?
+
+#### Fix Procedures
+
+**Collapsed section (COLLAPSED_SECTION / COLLAPSED_CARD):**
+```
+1. Check child layers:
    a. Text layers missing textAutoResize: "HEIGHT" → fix
    b. Image placeholders missing explicit height → set height
-   c. Inner frames set to "Hug contents" with no min-height → set min-height
+   c. Inner frames with primaryAxisSizingMode: "FIXED" → set to "AUTO"
    d. Auto-layout spacing set to 0 or negative → fix to design token spacing
-4. After fixing children, if section still below min-height → set explicit min-height
-5. Re-screenshot to verify fix
+2. After fixing children, if section still below min-height → set explicit minHeight
 ```
 
-**Rule:** Never mark the verification loop as passed if any section or card appears collapsed in the screenshot. This check takes priority over all other checks.
+**Grid with fixed height (GRID_FIXED_HEIGHT):**
+```
+Set primaryAxisSizingMode = 'AUTO' on the grid container frame
+```
+
+**Oversized button (OVERSIZED_BUTTON):**
+```
+Check for extra padding or nested frames inflating height — set explicit resize()
+```
+
+**FILL without auto-layout parent (FILL_WITHOUT_AUTOLAYOUT_PARENT):**
+```
+Either set parent.layoutMode = 'VERTICAL' or change child sizing to 'FIXED'/'HUG'
+```
+
+**Text overflow (TEXT_MAY_OVERFLOW):**
+```
+Set textAutoResize = 'HEIGHT' and layoutSizingHorizontal = 'FILL' after confirming parent has auto-layout
+```
+
+**Rule:** Never mark the verification loop as passed if the programmatic script reports any issues. Programmatic checks take priority over visual checks — fix all reported issues before taking a screenshot.
 
 **Exit conditions:**
-- All visual checks pass → proceed to Step 7
-- Max iterations reached → proceed to Step 7 with deviation log
+- Programmatic checks pass AND visual checks pass → proceed to Step 7
+- Max iterations reached → proceed to Step 7 with deviation log listing all unfixed issues
 - Critical failure (frame didn't generate, MCP error) → stop and report
 
 ### Step 7: Final Screenshot and Report

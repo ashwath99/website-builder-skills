@@ -1,7 +1,7 @@
 ---
 name: execution-prompts
 description: Master prompt templates for executing the landing page pipeline through AI coding agents. Contains Mode A/B/C templates, shared preamble, Page Blueprint format, prompt modifiers, and validation checklists. Use when starting any execution mode, writing agent prompts, or validating output.
-version: "5.1.0"
+version: "5.2.0"
 ---
 
 # Agent Execution Prompt — Master Templates
@@ -66,8 +66,15 @@ Variation Spec: {filename}               ← if variation-explorer/SKILL.md was 
 ### Purpose
 Parse a marketing content brief and generate a complete landing page as a Figma design frame.
 
-### Required Skill Files
-`pipeline-workflow/SKILL.md`, `brief-parser/SKILL.md`, `design-tokens/SKILL.md`, `component-library/SKILL.md`, `layout-patterns/SKILL.md`, `figma-frame-builder/SKILL.md`
+### Required Skill Files (MUST read ALL before any Figma calls)
+
+**CRITICAL — Read order matters. The agent MUST read these files in this order before making any `use_figma` call:**
+
+1. `figma-frame-builder/SKILL.md` — Figma runtime rules, API pitfalls, frame construction patterns, batching strategy. **This file prevents the most common build failures. Skipping it costs 30–40% of build time in debugging.**
+2. `figma-frame-builder/figma-code-patterns.md` — Copy-paste code snippets for every frame operation
+3. `figma-frame-builder/layout-code-templates.md` — Layout-specific Figma code templates
+
+Then the standard pipeline files: `pipeline-workflow/SKILL.md`, `brief-parser/SKILL.md`, `design-tokens/SKILL.md`, `component-library/SKILL.md`, `layout-patterns/SKILL.md`
 
 ### MCP Requirements
 Remote Figma MCP server connected (`mcp.figma.com/mcp`), `/figma-use` skill installed.
@@ -77,7 +84,11 @@ Remote Figma MCP server connected (`mcp.figma.com/mcp`), `/figma-use` skill inst
 ```
 [Shared Preamble — Section 2]
 
-Also read: figma-frame-builder/SKILL.md → Figma frame generation rules
+BEFORE ANY FIGMA CALLS — read these three files first (they contain critical API rules
+that prevent the most common build failures):
+- figma-frame-builder/SKILL.md          → Figma runtime rules, API pitfalls, batching
+- figma-frame-builder/figma-code-patterns.md  → Code snippets for every frame operation
+- figma-frame-builder/layout-code-templates.md → Layout-specific Figma code
 
 Content Brief: {brief-filename}
 {Attach any reference images: hero images, product screenshots, etc.}
@@ -88,38 +99,44 @@ Using these skill files:
 3. Map each content section to components from component-library/SKILL.md
 4. Apply design tokens from design-tokens/SKILL.md
 5. Search the connected design system for reusable components before creating new ones
+6. Write the Build Card to a file (MANDATORY — see Build Card section below)
 
 Generate the landing page as a Figma design frame using use_figma
 (invoke the /figma-use skill before each call).
 Target Figma file: {figma-file-url}
 
 Run the self-healing verification loop after generation:
-screenshot → compare against spec → fix mismatches → repeat (max 3 iterations).
+programmatic checks + screenshot → compare → fix → repeat (max 3 iterations).
 
 START — Deploy Figma design
 ```
 
 ### What the Agent Does
-1. Reads all referenced skill files
-2. Confirms MCP server connection and `/figma-use` skill availability
-3. Parses the content brief — identifies sections, flags gaps, classifies audience
-4. Infers page type and selects layout types — reads content signals from parsed brief, maps to page type, assigns section layout types from `layout-patterns/SKILL.md`
-5. Maps content to components — assigns each section a component from `component-library/SKILL.md`
-6. Searches design system for existing library components to reuse
-7. Resolves design tokens — applies values from `design-tokens/SKILL.md`, binds to Figma variables when available
-8. Pushes the assembled frame to Figma via `use_figma` following `figma-frame-builder/SKILL.md` rules
-9. Runs self-healing loop — screenshots, compares, fixes, re-screenshots until passing or max iterations
+1. **Reads Figma skill files FIRST** — `figma-frame-builder/SKILL.md`, `figma-code-patterns.md`, `layout-code-templates.md` (these contain API rules that prevent 30–40% of build failures)
+2. Reads remaining skill files (pipeline-workflow, brief-parser, design-tokens, component-library, layout-patterns)
+3. Confirms MCP server connection and `/figma-use` skill availability
+4. Discovers MCP tool prefix (see `figma-frame-builder/SKILL.md` Section 1)
+5. Parses the content brief — identifies sections, flags gaps, classifies audience
+6. Infers page type and selects layout types — reads content signals from parsed brief, maps to page type, assigns section layout types from `layout-patterns/SKILL.md`
+7. Maps content to components — assigns each section a component from `component-library/SKILL.md`
+8. Searches design system for existing library components to reuse (max 3 calls)
+9. Resolves design tokens — applies values from `design-tokens/SKILL.md`, binds to Figma variables when available
+10. **Writes the Build Card to a file** (MANDATORY — see below)
+11. Pushes the assembled frame to Figma via `use_figma` following `figma-frame-builder/SKILL.md` rules
+12. Runs self-healing loop — programmatic checks + screenshots, compares, fixes until passing or max iterations
 
 ### Post-Execution
 - Review the generated Figma frame
 - Make manual corrections if needed
 - If proceeding to code: run Mode B against the corrected frame
 
-### Build Phase Quick Reference Card
+### Build Phase Quick Reference Card (MANDATORY)
 
-**Context window pressure is real.** Reading 8–10 skill files (200–400 lines each) plus the brief plus token-values.md can consume 40%+ of context before the build even starts. After the preparation phase (steps 1–7 above), the agent should generate a condensed quick reference card and use ONLY this card during the build phase. The full skill files can be re-read if a specific rule needs clarification, but the build batches should work from the card.
+**Context window pressure is real.** Reading 8–10 skill files (200–400 lines each) plus the brief plus token-values.md can consume 40%+ of context before the build even starts. After the preparation phase (steps 1–9 above), the agent MUST write a Build Card to a file and use it as the primary reference during the build phase.
 
-**Generate this card after token extraction and brief parsing, before the first `use_figma` call:**
+**This is not optional.** The Build Card must be written to a file (`{product}-build-card.md`) — not kept in-context only. When context compacts, in-context cards are summarized and degraded, but a file persists and can be re-read. The card must be updated after each batch with new node IDs.
+
+**Write this card to `{product}-build-card.md` after token extraction and brief parsing, before the first `use_figma` call:**
 
 ```markdown
 # Build Card — {Product Name}
@@ -184,7 +201,45 @@ Page: "{page-name}" | Main frame ID: {to be filled after Batch 1}
 - Logos: gray rects 120×40 per company
 ```
 
-**Rule:** This card replaces the need to re-read full skill files during the build phase. Update it after each batch with new node IDs and any corrections.
+**Rules:**
+- This card replaces the need to re-read full skill files during the build phase
+- **Update the file after each batch** with new node IDs, section IDs, and any corrections
+- After Batch 1 completes, immediately update the Main Frame ID field
+- If context compacts mid-build, re-read this file to recover all state
+
+### Session Recovery Protocol
+
+When context compacts mid-build (long conversations, large sessions), the agent loses in-context state. This protocol prevents the most common post-compaction failure: creating a duplicate frame.
+
+**On resuming after context compaction:**
+
+1. **Re-read the Build Card file** (`{product}-build-card.md`) — this has all node IDs, colors, fonts, and the section plan
+2. **Look up the main frame by ID, NEVER by name** — `figma.getNodeById("{MAIN_FRAME_ID}")`. Name-based search (`findOne(n => n.name === ...)`) will find the wrong frame if duplicates exist
+3. **Verify frame integrity** — count the child sections in the main frame. Compare against the Build Card's section plan to determine which batches completed successfully
+4. **Resume from the next incomplete batch** — don't restart from scratch
+
+**Recovery code (paste at top of first `use_figma` call after resuming):**
+
+```javascript
+// === Session Recovery — verify frame integrity ===
+const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
+await figma.setCurrentPageAsync(targetPage);
+
+const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
+if (!mainFrame) return { error: "Main frame {MAIN_FRAME_ID} not found — may need to rebuild" };
+
+const sections = mainFrame.children.map(c => ({ id: c.id, name: c.name, height: c.height }));
+return {
+  frameId: mainFrame.id,
+  frameName: mainFrame.name,
+  sectionCount: sections.length,
+  sections: sections,
+  summary: "Frame integrity check — compare section count against Build Card"
+};
+// === End Recovery ===
+```
+
+**Critical rule:** If `getNodeById` returns null for the stored main frame ID, the frame was deleted or the ID is stale. Check the Build Card for the Figma file URL, open it, and verify. Do NOT create a new frame without confirming the old one is gone.
 
 ---
 

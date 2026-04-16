@@ -1,7 +1,7 @@
 ---
 name: brief-parser
 description: Parses marketing content briefs to infer page type, classify audiences, identify page sections, detect content gaps, and produce structured input for downstream skills. Use when processing any content brief, marketing document, or product copy that needs to be converted into a web page structure.
-version: "5.1.0"
+version: "5.2.0"
 ---
 
 # Content Brief — Parsing & Section Mapping
@@ -231,6 +231,54 @@ Group the inventoried content into page sections using the section types below. 
 - If content doesn't fit any type, flag it as "unclassified" and note it for manual review
 - Respect the brief's groupings — don't restructure content, just classify it
 - A brief may produce sections from multiple categories (e.g. a product landing page can include a How It Works and a Case Study excerpt)
+
+### Step 3b: Apply Section Budget and Feature Prioritization
+
+**Why this step exists:** Briefs — especially scraped website content — often produce 12–15+ potential sections. Building all of them in Figma (Mode A) consumes excessive `use_figma` calls, inflates context, and makes self-healing harder. This step constrains the section count to a manageable range and prioritizes features when the brief contains more than can be shown.
+
+#### Section Budget by Page Type
+
+| Page Type | Recommended Sections | Max Sections | Notes |
+|---|---|---|---|
+| **Product Landing** | 7–9 | 11 | Hero + 2–3 feature sections + social proof + CTA is the sweet spot |
+| **Feature Detail** | 5–7 | 9 | Deep-dive favors fewer, richer sections |
+| **Home Page** | 8–10 | 12 | Multiple product areas need more sections |
+| **Case Study** | 5–7 | 8 | Narrative flow — too many sections breaks the story |
+| **Pricing** | 4–6 | 8 | Plans + FAQ + CTA — keep it focused |
+| **About / Company** | 6–8 | 10 | Mission + team + values + story |
+| **Blog Article** | 3–5 | 6 | Header + body + author + related |
+| **Event / Webinar** | 5–7 | 9 | Details + speakers + agenda + registration |
+| **All other types** | 5–8 | 10 | Default range |
+
+**Rules:**
+- If Step 3 produces more sections than the max, merge related sections or drop the lowest-priority ones (see priority rules below)
+- If merging, combine the weaker section into the stronger one (e.g., a 2-item trust signals section merges into the hero or social proof section)
+- Report the original section count and final count in the parsed brief output
+
+#### Feature Prioritization
+
+When the brief contains more features than can fit in a single Feature Grid or Feature Overview section, apply these rules:
+
+| Feature Count in Brief | Action | Display Format |
+|---|---|---|
+| 1–6 features | Show all | Grid (2 or 3 columns) |
+| 7–9 features | Show all, split across 2 sections | Feature Grid (top 4–6) + Feature Row or Tabs (remaining) |
+| 10–15 features | Select top 6–8, note others | Feature Grid (6) + "And more" link or secondary section |
+| 16+ features | Select top 6, categorize rest | Feature Grid (6) + categorized listing section |
+
+**Selection criteria when prioritizing features:**
+1. Features with the most detailed descriptions in the brief rank higher (the brief author invested more effort)
+2. Features mentioned in the hero or value proposition section rank higher (they're the primary differentiators)
+3. Features with screenshots or images rank higher (they'll produce richer sections)
+4. Features unique to this product (vs. commodity features like "24/7 support") rank higher
+5. When in doubt, prefer features that align with the classified audience from Step 2b
+
+**Output:** Include both the selected features and the deferred features in the parsed brief:
+```markdown
+### Feature Prioritization
+- **Selected (6 of 22):** {list with rationale}
+- **Deferred (16):** {list — available for future sections or "And more" CTA}
+```
 
 ### Step 4: Flag Content Gaps
 

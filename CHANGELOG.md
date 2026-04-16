@@ -6,6 +6,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.2.0] — 2026-04-16
+
+### Added
+
+- **`execution-prompts/SKILL.md` — Session Recovery Protocol** — When context compacts mid-build, agent re-reads Build Card file and verifies frame integrity by ID (never by name). Includes recovery code snippet that checks frame existence and section count.
+- **`figma-frame-builder/SKILL.md` — Programmatic Self-Healing Checklist** (#6) — Two-phase verification: Phase A runs a `use_figma` script that checks section heights vs min-heights, grid sizing modes, button heights, FILL-without-auto-layout-parent, and text overflow. Phase B is visual screenshot check. Programmatic checks catch collapsed frames and sizing errors that screenshots miss.
+- **`figma-frame-builder/SKILL.md` — Unsupported API Methods** (#1) — Documents `loadAllPagesAsync` and `createPage` as unavailable/unreliable in the MCP plugin context.
+- **`figma-code-patterns.md` — Common Defaults That Cause Failures** — Reference table of dangerous defaults: `primaryAxisSizingMode` (FIXED 100px), `textAutoResize` (WIDTH_AND_HEIGHT), `layoutSizingHorizontal` (FIXED), `layoutSizingVertical` (FIXED).
+- **`brief-parser/SKILL.md` — Section Budget** (#5) — Max section count by page type (Product Landing: 7–9 recommended, 11 max). Prevents 12+ section builds that overwhelm Figma batching.
+- **`brief-parser/SKILL.md` — Feature Prioritization** (#5) — Rules for selecting top features when brief has 10+ features. Selection criteria: description depth, hero mention, screenshot availability, uniqueness, audience alignment.
+- **`design-tokens/token-sources.md` — Hybrid Token Resolution** (#4) — Protocol for merging explicit user values + CSS extraction + screenshot inference + defaults. Priority order with LOCKED tokens, screenshot inference rules, and source attribution report.
+
+### Changed
+
+- **`execution-prompts/SKILL.md` — Mode A Required Skill Files** — Figma skill files (`figma-frame-builder/SKILL.md`, `figma-code-patterns.md`, `layout-code-templates.md`) now listed as MUST-READ-FIRST with explicit warning that skipping them costs 30–40% of build time. Moved from "Also read" (easy to miss) to top of required list.
+- **`execution-prompts/SKILL.md` — Build Card Mandatory File** (#7) — Changed from "should generate" to "MUST write to `{product}-build-card.md`". File persists across context compaction; in-context cards degrade when summarized.
+- **`figma-frame-builder/SKILL.md` — layoutSizingVertical HUG Rule** (#1) — Added explicit rule: "After creating ANY frame with layoutMode, set `primaryAxisSizingMode = 'AUTO'` — default is FIXED (100px) which collapses every grid and card."
+- **`figma-frame-builder/SKILL.md` — Text Node Sizing Rule** (#1) — Added rule: "Set `textAutoResize = 'HEIGHT'` + `layoutSizingHorizontal = 'FILL'` AFTER appending to parent. Default WIDTH_AND_HEIGHT causes horizontal overflow."
+- **`figma-code-patterns.md` — Operation Order** — Added explicit warnings on steps 4 (⚠️ DEFAULT IS FIXED), 5 (counterAxisSizingMode), 9 (⚠️ DEFAULT IS WIDTH_AND_HEIGHT), 11 (fails without auto-layout parent).
+- **`figma-code-patterns.md` — Section Frame Pattern** — Updated `primaryAxisSizingMode` comment to warn about FIXED default.
+- **`design-tokens/token-sources.md` — Section Renumbering** — Gap Handling moved from Section 10 to Section 11 to accommodate new Hybrid Token Resolution (Section 10).
+
+### Fixed
+
+- **Root cause of 6.5/10 Mode A rating** — `figma-frame-builder/SKILL.md` was listed as a required file but not prominent enough in the prompt template. Agent skipped it, losing all v5.0.8–v5.1.0 Figma API rules. Fixed by making it the first file in the read order with a bold warning.
+
+---
+
 ## [5.1.0] — 2026-04-16
 
 ### Added

@@ -628,7 +628,104 @@ If a font is not available, follow this fallback chain in order:
 
 ---
 
-## 10 — Gap Handling
+## 10 — Hybrid Token Resolution (Mixed Sources)
+
+When no single token source provides complete coverage, the agent often works with a combination of inputs: explicit values from the user, screenshots for visual reference, and partial extractions from other sources. This section defines how to merge multiple sources into one resolved token set.
+
+### When This Applies
+
+This protocol is triggered when:
+- The primary token source (URL, CSS file, Figma DS) fails or returns incomplete results
+- The user provides some explicit values (e.g., "primary color is #E9142B, heading font is Lato")
+- A screenshot is available for inferring remaining values
+- An earlier extraction produced partial results
+
+### Source Priority (Merge Order)
+
+When multiple sources provide values for the same token, the highest-priority source wins:
+
+| Priority | Source | Trust Level | Notes |
+|---|---|---|---|
+| 1 (highest) | **User-provided explicit values** | Exact | Always trust — user knows their brand |
+| 2 | **Product token file** (.md) | Exact | Pre-authored by the team |
+| 3 | **CSS/JSON file extraction** | Exact | Parsed from actual code |
+| 4 | **Figma design system variables** | Exact | From the team's design system |
+| 5 | **URL extraction** (curl) | High | May be incomplete if site blocks |
+| 6 | **Screenshot inference** | Approximate | Color picker gives hex values; font/spacing are estimates |
+| 7 (lowest) | **Agent defaults** (from gap handling) | Fallback | Only when nothing else is available |
+
+### Resolution Process
+
+```
+1. Start with an empty token set (all 97+ tokens as {PLACEHOLDER})
+
+2. Apply highest-priority source first:
+   - If user provided explicit values → apply them to matching tokens
+   - Mark these tokens as LOCKED — lower-priority sources cannot override
+
+3. Apply next-priority available source:
+   - For each remaining {PLACEHOLDER} token, fill from this source
+   - Skip any LOCKED tokens
+
+4. Repeat for all available sources in priority order
+
+5. For any remaining {PLACEHOLDER} tokens:
+   - If a screenshot is available → use color picker / visual estimation
+   - Mark screenshot-derived values as APPROXIMATE in the token record
+
+6. Apply gap handling (Section 11) for anything still unresolved
+```
+
+### Screenshot-Based Inference Rules
+
+When inferring tokens from a screenshot, the agent can extract:
+
+| Token Category | Extractable? | Method | Accuracy |
+|---|---|---|---|
+| Colors (primary, CTA, text, bg) | **Yes** | Color-pick from screenshot regions | High — hex values are exact from color picker |
+| Font family | **Partial** | Visual matching against known fonts | Medium — sans-serif vs serif is clear, exact family is a guess |
+| Font sizes | **Partial** | Estimate from screenshot proportions | Low — depends on zoom level and resolution |
+| Spacing values | **No** | Cannot determine exact pixel values | Use defaults from token-values.md |
+| Border radius | **Partial** | Visual estimate (sharp, subtle, rounded) | Low — use nearest standard value (4px, 8px, 12px, 16px) |
+| Shadows | **Partial** | Visible/not visible, approximate spread | Low — use standard shadow-sm/md/lg |
+
+**Rules for screenshot inference:**
+- Always mark screenshot-derived values in the Build Card with `(from screenshot — approximate)`
+- When color-picking, sample from the largest, most representative area (e.g., button fill for CTA, page background for bg-page)
+- Never infer font-family from a screenshot alone if the user provided a CSS file or other text-based source — those are more reliable
+- If the screenshot and another source conflict on a color, ask the user before proceeding
+
+### Hybrid Resolution Report
+
+After merging, produce a source attribution report:
+
+```markdown
+## Token Resolution Report — Hybrid
+
+**Sources used (in priority order):**
+1. User-provided: color-primary, color-cta, font-heading
+2. CSS file: font-body, font-size-*, spacing-*, radius-*
+3. Screenshot: color-bg-page, color-text-primary, tint colors (approximate)
+4. Defaults: shadow-*, semantic colors
+
+**Source attribution:**
+| Token | Value | Source | Confidence |
+|---|---|---|---|
+| color-primary | #E9142B | User-provided | Exact |
+| color-cta | #FF6A00 | User-provided | Exact |
+| color-bg-page | #FFFFFF | Screenshot | High |
+| font-heading | Lato Bold | User-provided | Exact |
+| tint-1-surface | #F5F7FA | Screenshot | Approximate |
+| shadow-md | 0 2px 8px rgba(0,0,0,0.12) | Default | Fallback |
+
+**Tokens still unresolved:** {count} — see Gap Report below
+```
+
+Present this to the user so they can verify approximate values before proceeding.
+
+---
+
+## 11 — Gap Handling
 
 After extraction, some canonical tokens will remain as `{PLACEHOLDER}`. The agent handles gaps as follows:
 

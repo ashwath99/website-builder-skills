@@ -94,8 +94,8 @@ section.layoutSizingHorizontal = "FILL";  // Fill parent width
 
 // Set up vertical auto-layout for section content
 section.layoutMode = "VERTICAL";
-section.primaryAxisSizingMode = "AUTO";   // Hug contents
-section.counterAxisSizingMode = "FILL";
+section.primaryAxisSizingMode = "AUTO";   // ⚠️ MUST set explicitly — default is FIXED (100px) which collapses the section
+section.counterAxisSizingMode = "FIXED";  // Width controlled by resize() above
 section.minHeight = {MIN_HEIGHT};         // Collapse prevention (see Section 4.2)
 section.paddingTop = {SECTION_PADDING_Y};
 section.paddingBottom = {SECTION_PADDING_Y};
@@ -735,14 +735,25 @@ return {
 
 ```
 1. Create node          → figma.createFrame() / figma.createText()
-2. resize()             → node.resize(width, height)   [BEFORE sizing modes]
+2. resize()             → node.resize(width, height)   [BEFORE sizing modes — resize() resets them to FIXED]
 3. Set layout mode      → node.layoutMode = "VERTICAL"
-4. Set axis sizing      → node.primaryAxisSizingMode = "AUTO"
-5. Set min-height       → node.minHeight = 200
-6. Load font (text)     → await figma.loadFontAsync(...)  [BEFORE any text ops]
-7. Set text properties  → node.characters, fontSize, etc.
-8. textAutoResize       → node.textAutoResize = "HEIGHT"
-9. appendChild          → parent.appendChild(node)        [BEFORE FILL sizing]
-10. Set FILL sizing     → node.layoutSizingHorizontal = "FILL"  [AFTER appendChild]
-11. Return IDs          → return { createdNodeIds: [...] }
+4. Set axis sizing      → node.primaryAxisSizingMode = "AUTO"    [⚠️ DEFAULT IS FIXED — always set explicitly]
+5. Set counter sizing   → node.counterAxisSizingMode = "FIXED"   [or "AUTO" — never leave as default]
+6. Set min-height       → node.minHeight = 200
+7. Load font (text)     → await figma.loadFontAsync(...)  [BEFORE any text ops]
+8. Set text properties  → node.characters, fontSize, etc.
+9. textAutoResize       → node.textAutoResize = "HEIGHT"          [⚠️ DEFAULT IS WIDTH_AND_HEIGHT — causes overflow]
+10. appendChild         → parent.appendChild(node)                 [BEFORE FILL sizing]
+11. Set FILL sizing     → node.layoutSizingHorizontal = "FILL"   [AFTER appendChild — fails without auto-layout parent]
+12. Return IDs          → return { createdNodeIds: [...] }
 ```
+
+## Common Defaults That Cause Failures
+
+| Property | Default Value | Why It's Dangerous | What to Set |
+|---|---|---|---|
+| `primaryAxisSizingMode` | `FIXED` (100px) | Every grid and card collapses to 100px | `'AUTO'` (hug contents) |
+| `textAutoResize` | `WIDTH_AND_HEIGHT` | Text overflows parent horizontally | `'HEIGHT'` (wrap + grow) |
+| `layoutSizingHorizontal` | `FIXED` | Child doesn't fill parent width | `'FILL'` (after appendChild) |
+| `layoutSizingVertical` | `FIXED` | Child doesn't respond to content | `'HUG'` or `'FILL'` |
+| `counterAxisSizingMode` | `FIXED` | Frame width stays at creation size | `'FIXED'` (explicit) or `'AUTO'` |
