@@ -71,6 +71,37 @@ Extracted values must be mapped to the canonical token names defined in `design-
 - Fetch the **exact URL provided only** — do not crawl linked pages, sub-pages, or sitemaps. If the user shares `example.com/product`, fetch only that page and its linked stylesheets. Never traverse to `example.com/pricing` or any other path.
 - Maximum 5 stylesheet fetches per page (main CSS + up to 4 linked sheets)
 
+### Handling Minified CSS Files
+
+Production CSS files are often minified (single-line, no whitespace, 10K–50K+ characters). These cannot be read directly in context — they exceed token limits and are unparseable inline. When a CSS file (fetched via curl or provided by the user) is minified:
+
+**Detection:** If the CSS file has fewer than 10 lines but more than 5K characters, it's minified.
+
+**Expansion protocol (run via Bash):**
+
+```bash
+# Step 1: Expand minified CSS into readable lines
+tr ';' '\n' < {FILE}.css | tr '{' '\n' | tr '}' '\n' > {FILE}-expanded.css
+
+# Step 2: Extract CSS custom properties (design tokens)
+grep -oE '\-\-[a-zA-Z0-9_-]+:\s*[^;]+' {FILE}-expanded.css | sort -u > tokens-raw.txt
+
+# Step 3: Extract font families
+grep -oE 'font-family:\s*[^;]+' {FILE}-expanded.css | sort -u > fonts-raw.txt
+
+# Step 4: Extract all hex colors (deduplicated)
+grep -oE '#[0-9a-fA-F]{3,8}' {FILE}-expanded.css | sort -u > colors-raw.txt
+
+# Step 5: Extract border-radius, box-shadow, font-size values
+grep -oE 'border-radius:\s*[^;]+' {FILE}-expanded.css | sort -u > radius-raw.txt
+grep -oE 'box-shadow:\s*[^;]+' {FILE}-expanded.css | sort -u > shadows-raw.txt
+grep -oE 'font-size:\s*[^;]+' {FILE}-expanded.css | sort -u > font-sizes-raw.txt
+```
+
+**After expansion:** Process the extracted files through the normal Track A (colors) and Track B (non-color) extraction pipelines below. The expanded file may still be large — work from the extracted text files, not the full expanded CSS.
+
+**Rule:** Never try to read a minified CSS file directly into context. Always expand and extract via Bash first.
+
 **Extraction is split into two tracks:** color extraction (coverage-based classification) and non-color extraction (CSS property mapping). These run in parallel.
 
 ---

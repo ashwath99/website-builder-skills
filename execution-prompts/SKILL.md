@@ -1,7 +1,7 @@
 ---
 name: execution-prompts
 description: Master prompt templates for executing the landing page pipeline through AI coding agents. Contains Mode A/B/C templates, shared preamble, Page Blueprint format, prompt modifiers, and validation checklists. Use when starting any execution mode, writing agent prompts, or validating output.
-version: "5.2.0"
+version: "5.2.1"
 ---
 
 # Agent Execution Prompt — Master Templates
@@ -125,9 +125,32 @@ START — Deploy Figma design
 11. Pushes the assembled frame to Figma via `use_figma` following `figma-frame-builder/SKILL.md` rules
 12. Runs self-healing loop — programmatic checks + screenshots, compares, fixes until passing or max iterations
 
+### Scope
+Mode A generates a **desktop-only** (1440px) frame. Mobile and tablet breakpoints are out of scope. If responsive variants are needed, the user should:
+- Create separate frames at 768px (tablet) and 375px (mobile) manually, OR
+- Use Mode C to generate responsive HTML/CSS which handles breakpoints in code
+
+### Placeholder Content Tagging
+
+Not all text in the generated frame comes from the brief. Some content must be fabricated (testimonial quotes, specific stat numbers, person names). The agent must clearly mark what's real vs. fabricated:
+
+**Naming convention for fabricated content:**
+- Frame layer names: append `[placeholder]` suffix — e.g., `Testimonial: Jane Doe, Acme Corp [placeholder]`
+- Text content: wrap fabricated strings in curly braces — e.g., `{99.9% Uptime SLA}`
+
+**In the post-generation report, include a Fabricated Content section:**
+```markdown
+## Fabricated Content (requires user review)
+- Testimonial quotes: 3 quotes with fabricated names and companies
+- Statistics: "99.9% Uptime SLA", "500K+ Endpoints" (numbers not from brief)
+- CTA secondary text: "No credit card required" (not in brief)
+```
+
+**Rule:** Content directly from the brief is always real. Content the agent generates to fill gaps (social proof, statistics, secondary copy) is always fabricated and must be tagged.
+
 ### Post-Execution
 - Review the generated Figma frame
-- Make manual corrections if needed
+- Make manual corrections if needed — check fabricated content markers for accuracy
 - If proceeding to code: run Mode B against the corrected frame
 
 ### Build Phase Quick Reference Card (MANDATORY)

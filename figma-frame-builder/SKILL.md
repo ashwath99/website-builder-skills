@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.2.0"
+version: "5.2.1"
 ---
 
 # Figma Capture — Frame Generation
@@ -100,6 +100,18 @@ The new Figma MCP server consolidates write operations into a single unified too
 | Custom skills | Your team's conventions packaged as installable skills | Optional — enhances consistency |
 
 **Rule:** Always pass `skillNames` when calling `use_figma` for logging and workflow tracking.
+
+### Screenshot Tool Fallback Chain
+
+Different environments have different screenshot tools available. Try in this order:
+
+| Priority | Tool | Availability | Notes |
+|---|---|---|---|
+| 1 | `{prefix}get_screenshot` | MCP remote server — always available when MCP is connected | Pass `nodeId` and `fileKey`. Recommended default. |
+| 2 | `figma_take_screenshot` (Desktop Bridge) | Only when Figma Desktop Bridge plugin is connected | May not be available in all setups |
+| 3 | Manual screenshot | Always | Ask the user to take a screenshot and attach it |
+
+**Rule:** Don't assume the Desktop Bridge is available. Start with the MCP remote `get_screenshot` tool (using the discovered prefix from Section 1). Only fall back to Desktop Bridge if MCP remote fails, and to manual if both fail.
 
 ---
 
@@ -539,7 +551,27 @@ If either is missing, stop and instruct the user to set up the Figma MCP plugin.
 
 Before starting fresh, check if a Build Card file (`{product}-build-card.md`) already exists from a prior session or pre-compaction state. If it does, follow the Session Recovery Protocol in `execution-prompts/SKILL.md` instead of starting from Step 1.
 
-### Step 2: Search for Existing Components (Structural Only)
+### Step 2: Discover Target Page (Mandatory)
+
+```
+Call use_figma → run page discovery snippet from figma-code-patterns.md Section 1a
+Pass the node-id from the Figma URL → returns page name and page ID
+Store page name in Build Card
+```
+
+**Rule:** Never assume the page name from the URL or project name — they often don't match. Always discover it.
+
+### Step 2b: Font Availability Check (Mandatory)
+
+```
+Call use_figma → run font availability check from figma-code-patterns.md Section 8
+Pass all font families from the Build Card
+Returns available/unavailable status for each font
+```
+
+If any font is unavailable, follow the fallback chain in `token-sources.md` Section 9. Update the Build Card with the resolved fallback fonts before proceeding. **Do not skip this step** — unavailable fonts cause `loadFontAsync` failures that waste entire batch attempts.
+
+### Step 3: Search for Existing Components (Structural Only)
 ```
 Call search_design_system → check for reusable structural components
 (buttons, cards, nav bars) — max 3 search calls total
@@ -548,28 +580,30 @@ Catalog available components for reuse. Note any gaps that require building from
 
 **Do NOT search for token values** (colors, fonts, spacing). All tokens are already collected from the token source selected at session start. Apply them directly.
 
-### Step 3: Create Top-Level Frame
+### Step 4: Create Top-Level Frame
 ```
 Invoke /figma-use skill
-Call use_figma → create frame on target page with properties from Section 4.1
+Call use_figma → create frame on target page with properties from Section 4
+Use the Standard Batch Preamble from figma-code-patterns.md (includes all helpers)
 ```
 
-### Step 4: Build Section Frames (Top to Bottom)
+### Step 5: Build Section Frames (Top to Bottom)
 For each section in the layout pattern's sequence:
 ```
 Call use_figma → create section frame → set dimensions, padding, fill
+  → Use Standard Batch Preamble helpers (mkSection, mkText, mkGrid, etc.)
   → Create component frames within section (reuse library components where possible)
     → Populate text content
     → Place images or placeholders
     → Apply token values (bind to variables when available)
 ```
 
-### Step 5: Apply Tinted Section Alternation
+### Step 6: Apply Tinted Section Alternation
 ```
 Walk through sections → assign tint pairs per layout_patterns rules
 ```
 
-### Step 6: Self-Healing Verification Loop
+### Step 7: Self-Healing Verification Loop
 
 This replaces the single-pass screenshot of v3.0 with a two-phase iterative verification cycle: **programmatic checks first** (catches structural issues screenshots miss), then **visual checks** (catches layout/aesthetic issues).
 
@@ -744,7 +778,7 @@ Set textAutoResize = 'HEIGHT' and layoutSizingHorizontal = 'FILL' after confirmi
 - Max iterations reached → proceed to Step 7 with deviation log listing all unfixed issues
 - Critical failure (frame didn't generate, MCP error) → stop and report
 
-### Step 7: Final Screenshot and Report
+### Step 8: Final Screenshot and Report
 ```
 Take final screenshot via use_figma
 Present to user with summary

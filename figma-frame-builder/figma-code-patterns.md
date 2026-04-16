@@ -7,9 +7,39 @@ These are tested, production-ready code snippets for common `use_figma` operatio
 
 ---
 
-## 1 — Frame-Finder Preamble
+## 1 — Page Discovery + Frame-Finder Preamble
 
-**Use at the TOP of every `use_figma` call after the first one.**
+### 1a — Page Discovery (Batch 0 — run once before any build)
+
+When given a Figma URL with `node-id`, the agent doesn't know the page name. **Always discover it first:**
+
+```javascript
+// === Page Discovery — run ONCE at session start ===
+// Extract the node-id from the URL (e.g., node-id=174-2 → "174:2")
+const targetNode = figma.getNodeById("{NODE_ID_FROM_URL}");
+if (!targetNode) return { error: "Node {NODE_ID_FROM_URL} not found" };
+
+// Walk up to find the page
+let targetPage = targetNode;
+while (targetPage && targetPage.type !== "PAGE") targetPage = targetPage.parent;
+if (!targetPage) return { error: "Could not find parent page" };
+
+await figma.setCurrentPageAsync(targetPage);
+
+return {
+  pageId: targetPage.id,
+  pageName: targetPage.name,
+  existingChildren: targetPage.children.map(c => ({ id: c.id, name: c.name })),
+  summary: "Target page: '" + targetPage.name + "' (id: " + targetPage.id + ")"
+};
+// === End Page Discovery ===
+```
+
+**Store the `pageName` in the Build Card** — all subsequent calls use it.
+
+### 1b — Frame-Finder Preamble (every call after Batch 1)
+
+**Use at the TOP of every `use_figma` call after the main frame is created.**
 
 ```javascript
 // === Frame-Finder Preamble ===
@@ -21,6 +51,8 @@ const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
 if (!mainFrame) return { error: "Main frame '{MAIN_FRAME_ID}' not found" };
 // === End Preamble ===
 ```
+
+**Rule:** Use the page name discovered in 1a. Never hardcode a page name from the URL or project name — they often don't match.
 
 ---
 
@@ -757,3 +789,166 @@ return {
 | `layoutSizingHorizontal` | `FIXED` | Child doesn't fill parent width | `'FILL'` (after appendChild) |
 | `layoutSizingVertical` | `FIXED` | Child doesn't respond to content | `'HUG'` or `'FILL'` |
 | `counterAxisSizingMode` | `FIXED` | Frame width stays at creation size | `'FIXED'` (explicit) or `'AUTO'` |
+
+---
+
+## Common API Errors and Fixes
+
+These are the most frequently encountered Figma Plugin API errors. Check this table before debugging.
+
+| Error / Symptom | Cause | Fix |
+|---|---|---|
+| `counterAxisSizingMode = "FILL"` throws or is ignored | Only `"FIXED"` and `"AUTO"` are valid for `counterAxisSizingMode` | Use `counterAxisSizingMode = "FIXED"` on the parent. For children to fill width, set `child.layoutSizingHorizontal = "FILL"` after `parent.appendChild(child)` |
+| `layoutSizing = "FILL"` — property doesn't exist | There's no `layoutSizing` property — it's split into two | Use `layoutSizingHorizontal` and `layoutSizingVertical` separately |
+| `figma.currentPage = page` fails | `currentPage` is read-only | Use `await figma.setCurrentPageAsync(page)` |
+| `figma.loadAllPagesAsync()` — not a function | This method doesn't exist in the Plugin API | Pages load on demand via `setCurrentPageAsync`. No bulk load needed. |
+| `layoutSizingHorizontal = "FILL"` silently ignored | Node isn't a child of an auto-layout parent yet | Call `parent.appendChild(node)` first, then set FILL |
+| `resize()` undoes sizing modes | `resize()` resets `layoutSizingHorizontal/Vertical` to `FIXED` | Call `resize()` before setting any sizing modes |
+| `loadFontAsync` throws "Font not found" | Font family or style string doesn't match exactly | Run font check (Section 8) first. Style names are case-sensitive: "Semi Bold" not "SemiBold" |
+| Shadow/effect causes script failure | Missing `blendMode` on effect object | Always include `blendMode: 'NORMAL'` on DROP_SHADOW and INNER_SHADOW |
+| `node.fills[0].color = {...}` doesn't work | Fills/strokes/effects arrays are read-only | Clone: `const f = [...node.fills]; f[0] = {...f[0], color: newColor}; node.fills = f;` |
+| `figma.notify("...")` throws "not implemented" | Method not available in MCP plugin context | Use `return { message: "..." }` instead |
+| `figma.closePlugin()` errors | Code is auto-wrapped — closing is handled automatically | Never call `closePlugin()` |
+| Frame created at (0,0) overlaps existing content | Default position is origin | Calculate `rightEdge` from existing nodes (see Section 2) |
+
+---
+
+## Standard Batch Preamble (Helper Functions)
+
+Every `use_figma` batch call after Batch 0 (page discovery) needs the same set of helper functions. Because the Plugin API context resets between calls, these must be included in every batch.
+
+**Copy this block at the top of every build batch** (after the Frame-Finder Preamble). Replace placeholder values with Build Card values.
+
+```javascript
+// === Standard Batch Preamble ===
+// Frame-Finder (paste Section 1b preamble above this)
+
+// --- Color Helpers ---
+function hex(h) {
+  h = h.replace('#', '');
+  return {
+    r: parseInt(h.substring(0, 2), 16) / 255,
+    g: parseInt(h.substring(2, 4), 16) / 255,
+    b: parseInt(h.substring(4, 6), 16) / 255
+  };
+}
+function solid(hexColor, opacity) {
+  const paint = { type: 'SOLID', color: hex(hexColor) };
+  if (opacity !== undefined) paint.opacity = opacity;
+  return [paint];
+}
+
+// --- Build Card Values (replace from {product}-build-card.md) ---
+const COLORS = {
+  primary: hex("{COLOR_PRIMARY}"),
+  cta: hex("{COLOR_CTA}"),
+  ctaHover: hex("{COLOR_CTA_HOVER}"),
+  textPrimary: hex("{COLOR_TEXT_PRIMARY}"),
+  textSecondary: hex("{COLOR_TEXT_SECONDARY}"),
+  bgPage: hex("{COLOR_BG_PAGE}"),
+  bgSurface: hex("{COLOR_BG_SURFACE}"),
+  tint1Surface: hex("{COLOR_TINT1_SURFACE}"),
+  tint1Border: hex("{COLOR_TINT1_BORDER}")
+};
+const FONTS = {
+  heading: { family: "{FONT_HEADING}", style: "{FONT_HEADING_STYLE}" },
+  body: { family: "{FONT_BODY}", style: "Regular" },
+  bodyBold: { family: "{FONT_BODY}", style: "Bold" }
+};
+const SPACING = {
+  sectionPaddingY: {SECTION_PADDING_Y},
+  gridGutter: {GRID_GUTTER},
+  cardPadding: {CARD_PADDING},
+  contentMaxWidth: {CONTENT_MAX_WIDTH},
+  sidePadding: (1440 - {CONTENT_MAX_WIDTH}) / 2
+};
+const RADIUS = { md: {RADIUS_MD} };
+const SHADOW_MD = {
+  type: 'DROP_SHADOW', blendMode: 'NORMAL',
+  color: { r: 0, g: 0, b: 0, a: 0.12 },
+  offset: { x: 0, y: 2 }, radius: 8, spread: 0, visible: true
+};
+
+// --- Font Loading (load all fonts used in this batch) ---
+await figma.loadFontAsync(FONTS.heading);
+await figma.loadFontAsync(FONTS.body);
+await figma.loadFontAsync(FONTS.bodyBold);
+
+// --- Text Helper ---
+function mkText(parent, text, options = {}) {
+  const node = figma.createText();
+  node.fontName = options.font || FONTS.body;
+  node.characters = text;
+  node.fontSize = options.size || 16;
+  node.fills = solid(options.color || "{COLOR_TEXT_PRIMARY}");
+  if (options.lineHeight) node.lineHeight = { unit: 'PIXELS', value: options.lineHeight };
+  parent.appendChild(node);
+  node.textAutoResize = "HEIGHT";
+  node.layoutSizingHorizontal = "FILL";
+  return node;
+}
+
+// --- Section Helper ---
+function mkSection(name, options = {}) {
+  const section = figma.createFrame();
+  section.name = "Section: " + name;
+  section.resize(1440, 100);
+  mainFrame.appendChild(section);
+  section.layoutSizingHorizontal = "FILL";
+  section.layoutMode = "VERTICAL";
+  section.primaryAxisSizingMode = "AUTO";
+  section.counterAxisSizingMode = "FIXED";
+  section.minHeight = options.minHeight || 200;
+  section.paddingTop = SPACING.sectionPaddingY;
+  section.paddingBottom = SPACING.sectionPaddingY;
+  section.paddingLeft = SPACING.sidePadding;
+  section.paddingRight = SPACING.sidePadding;
+  section.itemSpacing = options.itemSpacing || 32;
+  section.fills = options.tint ? solid(options.tint) : solid("{COLOR_BG_PAGE}");
+  return section;
+}
+
+// --- Section Header Helper ---
+function mkSectionHeader(parent, title, subtitle) {
+  const header = figma.createFrame();
+  header.name = "Section Header";
+  header.layoutMode = "VERTICAL";
+  header.primaryAxisSizingMode = "AUTO";
+  header.counterAxisSizingMode = "AUTO";
+  header.itemSpacing = 12;
+  header.fills = [];
+  parent.appendChild(header);
+  header.layoutSizingHorizontal = "FILL";
+  header.counterAxisAlignItems = "CENTER";
+
+  mkText(header, title, { font: FONTS.heading, size: 32, lineHeight: 40 });
+  if (subtitle) mkText(header, subtitle, { size: 18, color: "{COLOR_TEXT_SECONDARY}", lineHeight: 28 });
+  return header;
+}
+
+// --- Grid Helper ---
+function mkGrid(parent, columns, options = {}) {
+  const grid = figma.createFrame();
+  grid.name = options.name || "Grid";
+  grid.layoutMode = "HORIZONTAL";
+  grid.layoutWrap = "WRAP";
+  grid.primaryAxisSizingMode = "FIXED";
+  grid.counterAxisSizingMode = "AUTO";
+  grid.itemSpacing = SPACING.gridGutter;
+  grid.counterAxisSpacing = SPACING.gridGutter;
+  grid.fills = [];
+  parent.appendChild(grid);
+  grid.layoutSizingHorizontal = "FILL";
+  grid._columns = columns; // Store for card width calculation
+  return grid;
+}
+// === End Standard Batch Preamble ===
+```
+
+**Usage:** After pasting, replace all `{PLACEHOLDER}` values with the resolved values from the Build Card. The helpers are designed so that every subsequent section can be built with ~20–30 lines of section-specific code instead of 80+.
+
+**Card width calculation from grid helper:**
+```javascript
+// Calculate card width based on grid columns
+const cardWidth = (grid.width - SPACING.gridGutter * (grid._columns - 1)) / grid._columns;
+```

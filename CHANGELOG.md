@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.2.1] — 2026-04-16
+
+### Added
+
+- **`figma-code-patterns.md` — Page Discovery** (#2) — New Section 1a resolves a Figma URL node-id to its parent page name. Eliminates "Page not found" errors from hardcoded/assumed page names.
+- **`figma-code-patterns.md` — Common API Errors and Fixes** — Lookup table of 12 most frequent Plugin API errors: invalid enum values (`counterAxisSizingMode = "FILL"`), read-only arrays, silent FILL failures, font loading errors, etc.
+- **`figma-code-patterns.md` — Standard Batch Preamble** (#3) — Complete helper function block (hex, solid, mkText, mkSection, mkSectionHeader, mkGrid) with Build Card value placeholders. Eliminates ~300 lines of duplicated boilerplate across batches.
+- **`figma-frame-builder/SKILL.md` — Screenshot Tool Fallback Chain** (#5) — Priority: MCP remote `get_screenshot` → Desktop Bridge `figma_take_screenshot` → manual.
+- **`figma-frame-builder/SKILL.md` — Mandatory Page Discovery Step** (#2) — Step 2 in generation process now requires page discovery before any build.
+- **`figma-frame-builder/SKILL.md` — Mandatory Font Check Step** (#7) — Step 2b in generation process now requires font availability check before build. References figma-code-patterns Section 8 and token-sources Section 9.
+- **`design-tokens/token-sources.md` — Minified CSS Extraction** (#4) — Detection rule (fewer than 10 lines, more than 5K chars) + bash expansion protocol + targeted grep extraction for custom properties, fonts, colors, radius, shadows.
+- **`execution-prompts/SKILL.md` — Placeholder Content Tagging** (#6) — Naming convention: `[placeholder]` suffix on layer names, `{curly braces}` for fabricated text. Mandatory "Fabricated Content" section in post-generation report.
+- **`execution-prompts/SKILL.md` — Mode A Desktop-Only Scope** (#8) — Explicitly states Mode A = 1440px desktop only. Mobile/tablet breakpoints are out of scope.
+
+### Changed
+
+- **`figma-frame-builder/SKILL.md` — Generation Process Steps Renumbered** — Steps 2–8 (was 2–7) to accommodate new page discovery (Step 2) and font check (Step 2b) steps.
+- **`figma-code-patterns.md` — Section 1 Split** — Split into 1a (Page Discovery) and 1b (Frame-Finder Preamble). Preamble now references discovered page name.
+
+---
+
 ## [5.2.0] — 2026-04-16
 
 ### Added
