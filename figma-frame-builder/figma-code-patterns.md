@@ -966,8 +966,29 @@ const MIN_HEIGHTS = {
 };
 const issues = [];
 
+function checkText(node) {
+  // Check 5: Text overflow — WIDTH_AND_HEIGHT inside auto-layout parent
+  // Exception: centered labels (WIDTH_AND_HEIGHT is intentional when
+  // parent uses counterAxisAlignItems CENTER with FIXED sizing)
+  if (node.textAutoResize !== "WIDTH_AND_HEIGHT") return;
+  const parent = node.parent;
+  if (!parent || parent.layoutMode === "NONE") return;
+  const isCenteredLabel = parent.counterAxisSizingMode === "FIXED"
+    && parent.counterAxisAlignItems === "CENTER";
+  if (isCenteredLabel) return;
+  issues.push({
+    check: "TEXT_OVERFLOW", nodeId: node.id, name: node.name,
+    actual: "WIDTH_AND_HEIGHT", expected: "HEIGHT",
+    fix: "textAutoResize → HEIGHT, then layoutSizingHorizontal → FILL"
+  });
+}
+
 function checkNode(node, path) {
-  if (!node || !node.children) return;
+  if (!node) return;
+  // TEXT/VECTOR have no children — check text, then stop recursion
+  if (node.type === "TEXT") { checkText(node); return; }
+  if (node.type === "VECTOR" || !("children" in node)) return;
+
   const fullPath = path + " > " + (node.name || node.type);
 
   // Check 1: Section min-height
@@ -985,9 +1006,6 @@ function checkNode(node, path) {
 
   // Check 2: Grid/card sizing must be AUTO
   if (node.name && (node.name.startsWith("Feature Grid") || node.name.startsWith("Grid"))) {
-    if (node.primaryAxisSizingMode !== "FIXED") {
-      // Grids should be FIXED width (horizontal), AUTO height (counter)
-    }
     if (node.counterAxisSizingMode !== "AUTO") {
       issues.push({
         check: "GRID_SIZING", nodeId: node.id, name: node.name,
@@ -1019,22 +1037,8 @@ function checkNode(node, path) {
     }
   }
 
-  // Check 5: Text overflow — WIDTH_AND_HEIGHT inside fixed-width parent
-  if (node.type === "TEXT" && node.textAutoResize === "WIDTH_AND_HEIGHT") {
-    const parent = node.parent;
-    if (parent && parent.layoutMode !== "NONE") {
-      issues.push({
-        check: "TEXT_OVERFLOW", nodeId: node.id, name: node.name,
-        actual: "WIDTH_AND_HEIGHT", expected: "HEIGHT",
-        fix: "textAutoResize → HEIGHT, then layoutSizingHorizontal → FILL"
-      });
-    }
-  }
-
-  // Recurse
-  if (node.children) {
-    for (const child of node.children) checkNode(child, fullPath);
-  }
+  // Recurse into children
+  for (const child of node.children) checkNode(child, fullPath);
 }
 
 checkNode(mainFrame, "");
