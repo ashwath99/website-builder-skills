@@ -98,14 +98,14 @@ After any execution, the agent self-checks against this list.
 - [ ] All classes use BEM naming with `{product}-` prefix
 - [ ] All design tokens are CSS custom properties (no hardcoded values in rulesets)
 - [ ] Variable-bound Figma tokens map to matching CSS custom property names (Mode B — from get_design_context or use_figma extraction)
-- [ ] Primary CTA uses `color-primary` from `design-tokens/token-values.md`
+- [ ] Primary button uses `button-primary-bg` from `design-tokens/token-values.md`
 - [ ] Headings use `font-heading` from `design-tokens/token-values.md`
 - [ ] Responsive breakpoints at 480px and 1024px only
 - [ ] Desktop-first responsive approach
 - [ ] jQuery used only for UI interactions — no other JS libraries
 - [ ] Image paths use `./assets/` convention
 - [ ] Uncertain image mappings have `<!-- TODO -->` comments
-- [ ] Tinted sections follow matched surface/border color pair system
+- [ ] Section surfaces use semantic surface modifiers (`--brand`, `--subtle`, `--inverse`, `--default`)
 - [ ] No inline styles in HTML
 - [ ] Heading hierarchy is correct (H1 → H2 → H3, no skips)
 - [ ] Alt text on all images

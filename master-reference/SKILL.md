@@ -415,7 +415,8 @@ All six agents are interchangeable across all pipeline stages.
 
 | Standard | Value | Defined In |
 |---|---|---|
-| Primary CTA | Per `design-tokens/token-values.md` | `design-tokens/SKILL.md` |
+| Button styles (5) | Primary, Secondary, Highlight, Outline, Outline-inverse | `design-tokens/SKILL.md` §8 |
+| Section surfaces (6) | Brand, Brand Strong, Subtle, Brand Subtle, Inverse, Default | `design-tokens/SKILL.md` §2.5 |
 | Heading font | Per `design-tokens/token-values.md` | `design-tokens/SKILL.md` |
 | Code stack | HTML5, CSS3, jQuery | `css-js-generator/SKILL.md` |
 | Class naming | BEM with `{product}-` prefix | `html-generator/SKILL.md` |

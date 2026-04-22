@@ -1,7 +1,7 @@
 ---
 name: design-tokens
 description: Defines all design token values including colors, typography, spacing, shadows, borders, CTA styles, and brand invariants. Single source of truth for the visual identity. Use when applying design tokens, setting up brand colors, typography, or spacing for any landing page.
-version: "5.0.6"
+version: "5.4.0"
 ---
 
 # Design Guide — Token Authority
@@ -27,7 +27,7 @@ These values are locked. No trend adaptation, variation, or override may change 
 | CTA color | `{PLACEHOLDER}` | Action button color — may or may not equal brand primary |
 | Brand font (headings) | `{PLACEHOLDER}` | Heading font family |
 | Body font | `{PLACEHOLDER}` | System font stack or brand-specified body font |
-| CTA hierarchy | Primary (filled) → Secondary (outlined/ghost) → Tertiary (text link) | Order and visual weight must be maintained |
+| CTA hierarchy | Primary (filled action) → Secondary (filled brand) → Highlight (filled accent) → Outline → Outline-inverse | Order and visual weight must be maintained |
 
 → Additional invariants enforced in code output: see `css-js-generator/SKILL.md` (breakpoints, file format, naming conventions)
 
@@ -75,21 +75,29 @@ CTA color is separated from brand primary because many brands use a contrasting 
 | `color-error` | `{PLACEHOLDER}` | Error states, destructive actions |
 | `color-info` | `{PLACEHOLDER}` | Informational highlights |
 
-### 2.5 — Tinted Section Colors
+### 2.5 — Section Surfaces
 
-The tinted section pattern system uses matched surface/border color pairs. Each tint is used as a section background to create visual rhythm down the page.
+Surfaces are named section backgrounds chosen by **semantic role**, not by position. The builder picks a surface based on what the section *means*, not where it falls on the page.
 
-| Tint Name | Surface Color | Border Color | Usage |
+| Surface Name | Token | Value | Role |
 |---|---|---|---|
-| `tint-1` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | First alternate section background |
-| `tint-2` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | Second alternate section background |
-| `tint-3` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | Third alternate section background |
-| `tint-4` | `{PLACEHOLDER}` | `{PLACEHOLDER}` | Fourth alternate section background (if needed) |
+| **Brand** | `surface-brand` | `{PLACEHOLDER}` | Bold brand sections — hero banners, feature showcases |
+| **Brand Strong** | `surface-brand-strong` | `{PLACEHOLDER}` | Deeper emphasis — reinforcement sections, pricing highlights |
+| **Subtle** | `surface-subtle` | `{PLACEHOLDER}` | Light tinted break — feature overviews, FAQ, social proof |
+| **Brand Subtle** | `surface-brand-subtle` | `{PLACEHOLDER}` | Alternate light tint — same visual weight as Subtle, used to avoid repeating the same surface |
+| **Inverse** | `surface-inverse` | `{PLACEHOLDER}` | Dark sections — hero, footer, closing CTA, dark testimonials |
+| **Default** | `surface-default` | `{PLACEHOLDER}` | White/page-default — standard content sections |
 
-**Tint application rule:** Tinted sections alternate with white/default background sections to create visual separation. A tinted section's internal components (cards, borders) use the matched border color from the same tint pair, never a border color from a different tint.
+**Surface assignment rules:**
+- Surfaces alternate to create visual rhythm — never place two of the same surface adjacent
+- **Default** and **Subtle/Brand Subtle** alternate for the main page body
+- **Brand** and **Inverse** are reserved for high-impact sections (hero, CTA, pricing highlight)
+- **Brand Strong** is used sparingly — max 1–2 per page for deep emphasis
+- Text on Brand/Brand Strong/Inverse surfaces must use `color-text-inverse` (white)
+- Text on Default/Subtle/Brand Subtle surfaces uses `color-text-primary`
 
-→ For how tinted sections are structured in HTML: see `html-generator/SKILL.md`
-→ For how tint pairs are expressed as CSS custom properties: see `css-js-generator/SKILL.md`
+→ For surface assignment by section type: see `layout-patterns/SKILL.md` Section 2.2
+→ For surface CSS implementation: see `css-js-generator/SKILL.md`
 
 ---
 
@@ -99,53 +107,58 @@ This section defines **where** each color token is applied on the page. Placemen
 
 ### 3.1 — Color Application Model
 
-When a reference site is analyzed, the color system works as follows:
-- **Primary color** is the dominant brand color — it covers 50%+ of all brand-colored areas across the site (theme backgrounds, CTAs, accent elements). It is the visual identity of the site.
-- **Secondary color** is the complementary color that supports the primary — used sparingly for differentiation.
-- **Tertiary/accent** is rare — a third chromatic color if present at all.
-- **Surfaces** are the backgrounds that sections sit on. A surface is either: page-default (white/light), primary-tinted (primary at low opacity), secondary-tinted, neutral-tinted (gray), or dark (inverted).
+- **Primary color** is the dominant brand color — 50%+ of branded areas (theme backgrounds, accents). Visual identity of the site.
+- **CTA color** is the action button color — may equal primary or be a distinct contrasting color (e.g., red CTA on a blue-themed site).
+- **Surfaces** are section backgrounds chosen by semantic role (§2.5): Brand, Brand Strong, Subtle, Brand Subtle, Inverse, Default.
+- **Text color** follows surface: dark text on light surfaces, inverse text on dark/brand surfaces.
 
-→ For how colors are extracted from reference sources: see `design-tokens/token-sources.md`
+→ Color extraction: `design-tokens/token-sources.md`
 
 ### 3.2 — Hardcoded Placements
 
-These placements always map to the specified token. No AI discretion — the builder must follow these exactly.
+No AI discretion — follow exactly.
 
 | Placement Area | Token | Rule |
 |---|---|---|
-| Primary CTA background | `color-cta` | Action color — may differ from brand primary |
-| Primary CTA hover | `color-cta-hover` | Always |
-| Primary CTA active | `color-cta-active` | Always |
-| Primary CTA text | Auto-calculated | White (`#FFFFFF`) or dark (`color-text-primary`) — whichever passes WCAG 4.5:1 against `color-cta` |
-| Secondary CTA border | `color-cta` or `color-border-default` | Must be visually distinct from primary CTA |
+| Primary button background | `button-primary-bg` | Action color (typically CTA red) |
+| Primary button hover | `button-primary-bg-hover` | Always |
+| Primary button text | `button-primary-text` | From DS (typically white) |
+| Secondary button background | `button-secondary-bg` | Brand color (typically blue) |
+| Secondary button hover | `button-secondary-bg-hover` | Always |
+| Secondary button text | `button-secondary-text` | From DS (typically white) |
+| Highlight button background | `button-highlight-bg` | Accent color (typically yellow/gold) |
+| Highlight button hover | `button-highlight-bg-hover` | Always |
+| Highlight button text | `button-highlight-text` | From DS (typically dark) |
+| Outline button border | `button-primary-bg` | CTA-colored border, transparent fill |
+| Outline button text | `button-primary-bg` | Matches border color |
+| Outline-inverse border | `color-neutral-700` | Neutral border for dark surfaces |
 | Body text | `color-text-primary` | All paragraph text, list items |
 | Description / supporting text | `color-text-secondary` | Subtitles, metadata, card descriptions |
 | Caption / muted text | `color-text-tertiary` | Timestamps, footnotes, helper text |
-| Text on dark backgrounds | `color-text-inverse` | Any text over dark or primary-colored surfaces |
-| Page background | `color-bg-page` | `<body>` and default section background |
+| Text on Brand/Inverse surfaces | `color-text-inverse` | Any text over Brand, Brand Strong, or Inverse surfaces |
+| Page background | `color-bg-page` | `<body>` and `surface-default` sections |
 | Card / component surface | `color-bg-surface` | Card backgrounds, modal backgrounds |
-| Elevated surface | `color-bg-elevated` | Dropdowns, tooltips, popovers |
 | Default borders | `color-border-default` | Card borders, input borders, dividers |
-| Subtle borders | `color-border-light` | Section separators, light dividers |
 
 ### 3.3 — AI-Flexible Placements
 
-The builder selects from the listed token options based on content context. Every choice **must** pass WCAG validation (Section 3.4) before output.
+The builder selects a **surface** (§2.5) based on section purpose. Every choice must pass WCAG validation (§3.4).
 
-| Placement Area | Token Options | Guidance |
+| Section Type | Surface Options | Guidance |
 |---|---|---|
-| Hero banner background | `color-primary` (solid), `tint-1` (subtle), dark surface, image, `color-bg-page` | Depends on hero variant and content tone |
-| Section alternate background | `tint-1`, `tint-2`, `tint-3`, `tint-4` | Alternate with `color-bg-page` for visual rhythm — do not use same tint consecutively |
-| Feature icon color | `color-primary`, `color-secondary` | Match brand emphasis; primary for key features |
-| Highlight / special text | `color-primary`, `color-secondary` | Use sparingly — only for drawing attention to key phrases |
-| Footer background | Dark surface, neutral surface, `tint-1` | Context-dependent; dark footer is common for marketing sites |
-| Sidebar background | `color-bg-surface`, `tint-1` | Subtle differentiation from main content |
-| Pricing highlight card | `color-primary` background, `tint-1` background | Recommended/featured plan gets visual emphasis |
-| Testimonial / quote section | `tint-1`, `tint-2`, `color-bg-page` | Gentle visual break; avoid heavy tints |
-| Nav active state / underline | `color-primary` | Active link indicator |
-| Tag / badge background | `color-primary` at low opacity, `tint-1` | Labels, category tags |
-| Stat / metric highlight | `color-primary`, `color-secondary` | Draw attention to key numbers |
-| Form section background | `color-bg-surface`, `tint-1`, `color-bg-page` | Visually group the form area |
+| Hero banner | `surface-brand`, `surface-inverse`, `surface-default` + image | Brand/Inverse for impact; Default if hero has a background image |
+| Feature overview / grid | `surface-default`, `surface-subtle` | Light surfaces — content is the focus |
+| How it works / value props | `surface-subtle`, `surface-brand-subtle` | Gentle visual break from Default sections |
+| Social proof / testimonials | `surface-subtle`, `surface-default` | Subtle differentiation |
+| Trust signals / logos | `surface-subtle`, `surface-brand-subtle` | Light tint to group logos visually |
+| Statistics / metrics | `surface-brand`, `surface-brand-strong` | Bold surface draws attention to numbers |
+| Pricing | `surface-default`, `surface-subtle` | Clean background; use `surface-brand` only for the highlighted tier card |
+| FAQ | `surface-subtle`, `surface-default` | Low-emphasis section |
+| Closing CTA | `surface-brand`, `surface-brand-strong`, `surface-inverse` | High-impact — match or complement hero surface |
+| Footer | `surface-inverse` | Dark footer is standard for marketing sites |
+| Feature icon color | `color-primary`, `color-secondary` | Match brand emphasis |
+| Nav active state | `color-primary` | Active link indicator |
+| Tag / badge background | `surface-subtle` or `color-primary` at low opacity | Labels, category tags |
 
 ### 3.4 — WCAG Validation Rules
 
@@ -171,7 +184,7 @@ Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA 
 
 ## 4 — Typography Scale
 
-### 3.1 — Font Families
+### 4.1 — Font Families
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -181,7 +194,7 @@ Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA 
 
 **CDN reference for heading font:** `{PLACEHOLDER}` (if applicable)
 
-### 3.2 — Size Scale
+### 4.2 — Size Scale
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -194,7 +207,7 @@ Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA 
 | `font-size-body` | `{PLACEHOLDER}` | Default body text |
 | `font-size-body-sm` | `{PLACEHOLDER}` | Captions, metadata, small print |
 
-### 3.3 — Weight Scale
+### 4.3 — Weight Scale
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -203,7 +216,7 @@ Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA 
 | `font-weight-regular` | `{PLACEHOLDER}` | Body text, descriptions |
 | `font-weight-light` | `{PLACEHOLDER}` | Display text (if light style is used) |
 
-### 3.4 — Line Heights
+### 4.4 — Line Heights
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -211,7 +224,7 @@ Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA 
 | `line-height-body` | `{PLACEHOLDER}` | Body text, descriptions |
 | `line-height-tight` | `{PLACEHOLDER}` | Display text, compact headings |
 
-### 3.5 — Letter Spacing
+### 4.5 — Letter Spacing
 
 | Token Name | Value | Usage |
 |---|---|---|
@@ -277,40 +290,90 @@ A consistent spacing scale used across all components and layouts. All spacing v
 
 ---
 
-## 8 — CTA Styles
+## 8 — Button Styles
 
-CTA hierarchy defines three levels. Every page must respect this visual weight order.
+Five button styles, ordered by visual weight. Every page must respect this hierarchy — Primary carries the strongest emphasis, Outline-inverse the lightest.
 
-### Primary CTA
-| Property | Value |
-|---|---|
-| Background | `color-cta` |
-| Text color | `{PLACEHOLDER}` |
-| Font weight | `font-weight-semibold` |
-| Border radius | `radius-sm` |
-| Padding | `{PLACEHOLDER}` |
-| Hover background | `color-cta-hover` |
-| Active background | `color-cta-active` |
+### 8.1 — Primary (Filled Action)
+The main conversion button. Uses the CTA/action color (typically red or a high-contrast action tone).
 
-### Secondary CTA
-| Property | Value |
-|---|---|
-| Background | `transparent` |
-| Border | `{PLACEHOLDER}` (typically 1–2px solid, brand or neutral color) |
-| Text color | `{PLACEHOLDER}` |
-| Font weight | `font-weight-semibold` |
-| Border radius | `radius-sm` |
-| Padding | Same as primary |
-| Hover | `{PLACEHOLDER}` |
+| Property | Token | Notes |
+|---|---|---|
+| Background | `button-primary-bg` | Action color — distinct from brand primary |
+| Hover bg | `button-primary-bg-hover` | Darkened ~10% |
+| Text | `button-primary-text` | Typically white |
+| Font weight | `font-weight-semibold` | |
+| Border radius | `radius-sm` or `radius-pill` | From DS — pill (`9999px`) if DS uses rounded buttons |
+| Min height | `{PLACEHOLDER}` | e.g., 48px |
+| Padding | `{PLACEHOLDER}` | e.g., `12px 32px` |
 
-### Tertiary CTA (Text Link)
-| Property | Value |
-|---|---|
-| Background | `none` |
-| Text color | `{PLACEHOLDER}` |
-| Font weight | `font-weight-semibold` |
-| Text decoration | `{PLACEHOLDER}` |
-| Hover | `{PLACEHOLDER}` |
+### 8.2 — Secondary (Filled Brand)
+Supporting action button. Uses the brand primary color to reinforce identity without competing with Primary.
+
+| Property | Token | Notes |
+|---|---|---|
+| Background | `button-secondary-bg` | Brand primary color |
+| Hover bg | `button-secondary-bg-hover` | Darkened ~10% |
+| Text | `button-secondary-text` | Typically white |
+| Font weight | `font-weight-semibold` | |
+| Border radius | Same as Primary | |
+| Min height | Same as Primary | |
+| Padding | Same as Primary | |
+
+### 8.3 — Highlight (Filled Accent)
+Attention-drawing button for promotions, special offers, or pricing tier CTAs. Uses an accent color (typically yellow/gold) that contrasts with both Primary and Secondary.
+
+| Property | Token | Notes |
+|---|---|---|
+| Background | `button-highlight-bg` | Accent color (e.g., yellow/gold) |
+| Hover bg | `button-highlight-bg-hover` | Darkened ~10% |
+| Text | `button-highlight-text` | Typically dark text (for light accent bg) |
+| Font weight | `font-weight-semibold` | |
+| Border radius | Same as Primary | |
+| Min height | Same as Primary | |
+| Padding | Same as Primary | |
+
+### 8.4 — Outline (Ghost Action)
+Low-emphasis action button for light surfaces. Transparent fill with a CTA-colored border.
+
+| Property | Token | Notes |
+|---|---|---|
+| Background | `transparent` | |
+| Border | `2px solid button-primary-bg` | Uses CTA color for border |
+| Hover bg | `button-primary-bg` at 8–10% opacity | Subtle fill on hover |
+| Text | `button-primary-bg` | Matches border color |
+| Font weight | `font-weight-semibold` | |
+| Border radius | Same as Primary | |
+| Min height | Same as Primary | |
+| Padding | Same as Primary | |
+
+### 8.5 — Outline-inverse (Ghost on Dark)
+Low-emphasis button for dark/inverse surfaces. Neutral light border with white text.
+
+| Property | Token | Notes |
+|---|---|---|
+| Background | `transparent` | |
+| Border | `2px solid color-neutral-700` | Light neutral border |
+| Hover bg | `color-text-inverse` at 10% opacity | Subtle white fill |
+| Text | `color-text-inverse` | White |
+| Font weight | `font-weight-semibold` | |
+| Border radius | Same as Primary | |
+| Min height | Same as Primary | |
+| Padding | Same as Primary | |
+
+### 8.6 — Button Placement Rules
+
+| Context | Recommended Styles | Avoid |
+|---|---|---|
+| Hero CTA (primary action) | Primary | Highlight, Outline-inverse |
+| Hero CTA (secondary action) | Outline, Outline-inverse (on dark hero) | Highlight |
+| Pricing — highlighted tier | Primary or Highlight | Outline |
+| Pricing — other tiers | Secondary or Outline | |
+| Closing CTA section | Primary | Outline (too subtle for closing) |
+| Card actions | Secondary, Outline | Primary (too heavy per-card) |
+| Nav CTA | Primary or Secondary | Highlight |
+| Form submit | Primary | Outline (too subtle for conversion) |
+| Banner / promo | Highlight | Outline-inverse |
 
 ---
 

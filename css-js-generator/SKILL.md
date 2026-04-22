@@ -1,7 +1,7 @@
 ---
 name: css-js-generator
-description: Defines all CSS and JavaScript output rules including custom property syntax, responsive desktop-first implementation, file organization, tinted section and bento grid CSS, jQuery interaction patterns, animation standards, and code quality rules. Use when generating styles.css and script.js for any landing page.
-version: "5.0.6"
+description: Defines all CSS and JavaScript output rules including custom property syntax, responsive desktop-first implementation, file organization, section surface and button style CSS, bento grid CSS, jQuery interaction patterns, animation standards, and code quality rules. Use when generating styles.css and script.js for any landing page.
+version: "5.4.0"
 ---
 
 # CSS & JS Rules — Code Output Standards
@@ -48,7 +48,8 @@ All design tokens are expressed as CSS custom properties following this pattern:
 | `space` | `--msp-space-sm`, `--msp-space-lg`, `--msp-space-section` |
 | `radius` | `--msp-radius-sm`, `--msp-radius-md` |
 | `shadow` | `--msp-shadow-sm`, `--msp-shadow-md` |
-| `tint` | `--msp-tint-1-surface`, `--msp-tint-1-border` |
+| `surface` | `--msp-surface-brand`, `--msp-surface-subtle` |
+| `button` | `--msp-button-primary-bg`, `--msp-button-highlight-text` |
 
 ### 2.2 — Declaration Block
 
@@ -65,11 +66,24 @@ All custom properties are declared in a `:root` block at the top of `styles.css`
   --{product}-color-bg-page: {value};
   --{product}-color-bg-surface: {value};
 
-  /* Tinted Sections — surface/border pairs from design-tokens/SKILL.md */
-  --{product}-tint-1-surface: {value};
-  --{product}-tint-1-border: {value};
-  --{product}-tint-2-surface: {value};
-  --{product}-tint-2-border: {value};
+  /* Section Surfaces — semantic backgrounds from design-tokens/SKILL.md §2.5 */
+  --{product}-surface-brand: {value};
+  --{product}-surface-brand-strong: {value};
+  --{product}-surface-subtle: {value};
+  --{product}-surface-brand-subtle: {value};
+  --{product}-surface-inverse: {value};
+  --{product}-surface-default: {value};
+
+  /* Button Styles — from design-tokens/SKILL.md §8 */
+  --{product}-button-primary-bg: {value};
+  --{product}-button-primary-bg-hover: {value};
+  --{product}-button-primary-text: {value};
+  --{product}-button-secondary-bg: {value};
+  --{product}-button-secondary-bg-hover: {value};
+  --{product}-button-secondary-text: {value};
+  --{product}-button-highlight-bg: {value};
+  --{product}-button-highlight-bg-hover: {value};
+  --{product}-button-highlight-text: {value};
 
   /* Typography — values from design-tokens/SKILL.md */
   --{product}-font-heading: {value};
@@ -149,7 +163,7 @@ All custom properties are declared in a `:root` block at the top of `styles.css`
 /* --- Buttons --- */
 
 /* ==========================================================================
-   6. Tinted Sections
+   6. Section Surfaces + Button Styles
    ========================================================================== */
 
 /* ==========================================================================
@@ -250,31 +264,117 @@ At each breakpoint, certain tokens are scaled down. These overrides go inside th
 
 ---
 
-## 5 — Tinted Section CSS
+## 5 — Section Surface CSS + Button Styles
 
-Tinted sections use the surface/border color pairs from `design-tokens/SKILL.md`.
+### 5.1 — Surface Modifiers
+
+Each section gets a surface modifier class that sets its background and text color.
 
 ```css
-/* Tinted section modifier */
-.{product}-section--tinted-1 {
-  background-color: var(--{product}-tint-1-surface);
+/* Surface modifiers — applied to section elements */
+.{product}-section--brand {
+  background-color: var(--{product}-surface-brand);
+  color: var(--{product}-color-text-inverse);
 }
-.{product}-section--tinted-1 .{product}-feature-card {
-  border-color: var(--{product}-tint-1-border);
+.{product}-section--brand-strong {
+  background-color: var(--{product}-surface-brand-strong);
+  color: var(--{product}-color-text-inverse);
 }
-
-.{product}-section--tinted-2 {
-  background-color: var(--{product}-tint-2-surface);
+.{product}-section--subtle {
+  background-color: var(--{product}-surface-subtle);
+  color: var(--{product}-color-text-primary);
 }
-.{product}-section--tinted-2 .{product}-feature-card {
-  border-color: var(--{product}-tint-2-border);
+.{product}-section--brand-subtle {
+  background-color: var(--{product}-surface-brand-subtle);
+  color: var(--{product}-color-text-primary);
+}
+.{product}-section--inverse {
+  background-color: var(--{product}-surface-inverse);
+  color: var(--{product}-color-text-inverse);
+}
+.{product}-section--default {
+  background-color: var(--{product}-surface-default);
+  color: var(--{product}-color-text-primary);
 }
 ```
 
-**Rule:** Components inside a tinted section use the border color from the same tint pair. Never mix tint-1 surface with tint-2 border.
+**Rule:** Surface modifier sets both background and text color. Components inside the section inherit text color. Never override section text color in a component unless explicitly needed.
 
-→ For tint alternation rules (which sections get which tint): see `layout-patterns/SKILL.md`
-→ For tint color values: see `design-tokens/SKILL.md`
+### 5.2 — Button Style Classes
+
+Five button styles, each with background, text, hover, and border tokens.
+
+```css
+/* Primary — filled action */
+.{product}-btn--primary {
+  background-color: var(--{product}-button-primary-bg);
+  color: var(--{product}-button-primary-text);
+  border: none;
+}
+.{product}-btn--primary:hover {
+  background-color: var(--{product}-button-primary-bg-hover);
+}
+
+/* Secondary — filled brand */
+.{product}-btn--secondary {
+  background-color: var(--{product}-button-secondary-bg);
+  color: var(--{product}-button-secondary-text);
+  border: none;
+}
+.{product}-btn--secondary:hover {
+  background-color: var(--{product}-button-secondary-bg-hover);
+}
+
+/* Highlight — filled accent */
+.{product}-btn--highlight {
+  background-color: var(--{product}-button-highlight-bg);
+  color: var(--{product}-button-highlight-text);
+  border: none;
+}
+.{product}-btn--highlight:hover {
+  background-color: var(--{product}-button-highlight-bg-hover);
+}
+
+/* Outline — ghost action (light surfaces) */
+.{product}-btn--outline {
+  background-color: transparent;
+  color: var(--{product}-button-primary-bg);
+  border: 2px solid var(--{product}-button-primary-bg);
+}
+.{product}-btn--outline:hover {
+  background-color: rgba(var(--{product}-button-primary-bg-rgb), 0.08);
+}
+
+/* Outline-inverse — ghost on dark surfaces */
+.{product}-btn--outline-inverse {
+  background-color: transparent;
+  color: var(--{product}-color-text-inverse);
+  border: 2px solid var(--{product}-color-border-light);
+}
+.{product}-btn--outline-inverse:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+```
+
+**Shared button base:**
+```css
+.{product}-btn {
+  font-weight: var(--{product}-font-weight-semibold);
+  border-radius: var(--{product}-radius-sm);
+  padding: 12px 32px;
+  min-height: 48px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+```
+
+→ For surface assignment rules: see `layout-patterns/SKILL.md` §2.2
+→ For surface token values: see `design-tokens/SKILL.md` §2.5
+→ For button placement rules: see `design-tokens/SKILL.md` §8.6
 
 ---
 

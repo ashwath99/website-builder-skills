@@ -67,14 +67,18 @@ Fills every `{PLACEHOLDER}` in the skill system. Read alongside `design-tokens/S
 
 ---
 
-## 5 — Tinted Section Color Pairs
+## 5 — Section Surfaces
 
-| Tint | Priority | Surface | Border |
+Semantic surface tokens — chosen by section role, not position. See `design-tokens/SKILL.md` §2.5 for assignment rules.
+
+| Token | Priority | Value | Role |
 |---|---|---|---|
-| `tint-1` | P2 | `{PLACEHOLDER}` | `{PLACEHOLDER}` |
-| `tint-2` | P2 | `{PLACEHOLDER}` | `{PLACEHOLDER}` |
-| `tint-3` | P3 | `{PLACEHOLDER}` | `{PLACEHOLDER}` |
-| `tint-4` | P3 | `{PLACEHOLDER}` | `{PLACEHOLDER}` |
+| `surface-brand` | **P1** | `{PLACEHOLDER}` | Bold brand sections — hero banners, feature showcases |
+| `surface-brand-strong` | P2 | `{PLACEHOLDER}` | Deeper emphasis — reinforcement sections, pricing highlights |
+| `surface-subtle` | **P1** | `{PLACEHOLDER}` | Light tinted break — feature overviews, FAQ, social proof |
+| `surface-brand-subtle` | P2 | `{PLACEHOLDER}` | Alternate light tint — avoids repeating same surface |
+| `surface-inverse` | **P1** | `{PLACEHOLDER}` | Dark sections — hero, footer, closing CTA |
+| `surface-default` | P2 | `{PLACEHOLDER}` | White/page-default — standard content sections |
 
 ---
 
@@ -168,30 +172,45 @@ Fills every `{PLACEHOLDER}` in the skill system. Read alongside `design-tokens/S
 
 ---
 
-## 10 — CTA Styles
+## 10 — Button Styles
 
-### Primary CTA
+Five button styles. See `design-tokens/SKILL.md` §8 for full specs and placement rules.
 
-| Property | Priority | Value |
+### Primary (Filled Action)
+
+| Token | Priority | Value |
 |---|---|---|
-| Text color | P2 | `{PLACEHOLDER}` |
-| Padding | P2 | `{PLACEHOLDER}` |
+| `button-primary-bg` | **P1** | `{PLACEHOLDER}` |
+| `button-primary-bg-hover` | P2 | `{PLACEHOLDER}` |
+| `button-primary-text` | P2 | `{PLACEHOLDER}` |
 
-### Secondary CTA
+### Secondary (Filled Brand)
 
-| Property | Priority | Value |
+| Token | Priority | Value |
 |---|---|---|
-| Border | P3 | `{PLACEHOLDER}` |
-| Text color | P3 | `{PLACEHOLDER}` |
-| Hover state | P3 | `{PLACEHOLDER}` |
+| `button-secondary-bg` | **P1** | `{PLACEHOLDER}` |
+| `button-secondary-bg-hover` | P2 | `{PLACEHOLDER}` |
+| `button-secondary-text` | P2 | `{PLACEHOLDER}` |
 
-### Tertiary CTA (Text Link)
+### Highlight (Filled Accent)
 
-| Property | Priority | Value |
+| Token | Priority | Value |
 |---|---|---|
-| Text color | P3 | `{PLACEHOLDER}` |
-| Text decoration | P3 | `{PLACEHOLDER}` |
-| Hover state | P3 | `{PLACEHOLDER}` |
+| `button-highlight-bg` | P2 | `{PLACEHOLDER}` |
+| `button-highlight-bg-hover` | P2 | `{PLACEHOLDER}` |
+| `button-highlight-text` | P2 | `{PLACEHOLDER}` |
+
+### Outline & Outline-inverse
+
+Outline uses `button-primary-bg` for border/text. Outline-inverse uses `color-neutral-700` border + `color-text-inverse` text. No additional tokens needed — derived from existing values.
+
+### Button Sizing
+
+| Token | Priority | Value |
+|---|---|---|
+| Button min height | P2 | `{PLACEHOLDER}` |
+| Button padding | P2 | `{PLACEHOLDER}` |
+| Button border radius | P2 | `{PLACEHOLDER}` |
 
 ---
 
@@ -255,7 +274,7 @@ Fills every `{PLACEHOLDER}` in the skill system. Read alongside `design-tokens/S
 
 ### Locked Values (not in this file — universal constants)
 
-CTA hierarchy: Primary → Secondary → Tertiary | `radius-full`: 9999px | `radius-none`: 0 | `shadow-none`: none | `letter-spacing-body`: normal
+Button hierarchy: Primary → Secondary → Highlight → Outline → Outline-inverse | `radius-full`: 9999px | `radius-none`: 0 | `shadow-none`: none | `letter-spacing-body`: normal
 
 ---
 
@@ -263,7 +282,7 @@ CTA hierarchy: Primary → Secondary → Tertiary | `radius-full`: 9999px | `rad
 
 | Priority | Count | Action |
 |---|---|---|
-| **P1** (must extract) | 15 | Extract or ask user — build breaks without |
-| **P2** (extract if available) | 30 | Use source if available, else sensible default |
-| **P3** (standard default) | 53 | Skip extraction — use defaults |
-| **Total** | **98** |  |
+| **P1** (must extract) | 18 | Extract or ask user — build breaks without |
+| **P2** (extract if available) | 38 | Use source if available, else sensible default |
+| **P3** (standard default) | 44 | Skip extraction — use defaults |
+| **Total** | **100** |  |

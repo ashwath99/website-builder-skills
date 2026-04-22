@@ -102,7 +102,24 @@ Colors are classified by visual weight, not CSS property names.
 
 If `color-cta` = `color-primary` → note "CTA uses brand primary." If different → both get own values.
 
-**Step 4 — Derive tints:** tinted primary sections → `tint-1`, secondary → `tint-2`, neutral gray → `tint-3`, dark (footer/hero) → `tint-4`. Derive border colors per tint.
+**Step 4 — Derive surfaces:** Map section background colors to semantic surface tokens:
+
+| CSS Signal | Token |
+|---|---|
+| Brand-tinted section backgrounds (light-medium saturation) | `surface-brand`, `surface-brand-strong` |
+| Light tinted / neutral-warm section backgrounds | `surface-subtle`, `surface-brand-subtle` |
+| Dark backgrounds (hero, footer, CTA) | `surface-inverse` |
+| White / untinted | `surface-default` |
+
+**Step 4b — Derive button styles:** Extract from `.btn-*` / `[class*="button"]` elements:
+
+| CSS Signal | Token |
+|---|---|
+| Primary action button `background-color` | `button-primary-bg` |
+| Brand/identity button `background-color` | `button-secondary-bg` |
+| Accent/promo button `background-color` | `button-highlight-bg` |
+| Hover variants (`button:hover`) | `*-hover` variants |
+| Button text `color` | `*-text` variants |
 
 **Step 5 — Hero image color extraction** (only if Step 1 found `background-image` on hero/banner):
 
@@ -183,11 +200,24 @@ Option B (Plugin API — fallback):
 | `color/cta/primary` or `color/action/primary` | `color-cta` |
 | `color/text/primary` | `color-text-primary` |
 | `color/bg/page` | `color-bg-page` |
-| `typography/heading/family` | `font-heading` |
+| `bg/brand` | `surface-brand` |
+| `bg/brand-strong` | `surface-brand-strong` |
+| `bg/subtle` | `surface-subtle` |
+| `bg/brand-subtle` | `surface-brand-subtle` |
+| `bg/inverse` | `surface-inverse` |
+| `bg/default` | `surface-default` |
+| `button/primary/bg` | `button-primary-bg` |
+| `button/primary/bg-hover` | `button-primary-bg-hover` |
+| `button/secondary/bg` | `button-secondary-bg` |
+| `button/secondary/bg-hover` | `button-secondary-bg-hover` |
+| `button/highlight/bg` | `button-highlight-bg` |
+| `button/highlight/bg-hover` | `button-highlight-bg-hover` |
+| `button/*/text` | `button-*-text` |
+| `typography/heading/family` or `font/family/Font` | `font-heading` |
 | `typography/body/family` | `font-body` |
-| `spacing/unit` | `space-unit` |
+| `spacing/unit` or `space/*` | `space-unit` |
 | `spacing/section/y` | `section-padding-y` |
-| `radius/sm` | `radius-sm` |
+| `radius/sm` or `radius/pill` | `radius-sm` / `radius-full` |
 | `shadow/md` | `shadow-md` |
 
 ---
@@ -271,11 +301,19 @@ Three formats supported: Style Dictionary (`{ "color": { "primary": { "value": "
 | `card-padding` | `card-padding` |
 | `shadow-sm` / `-md` / `-lg` | `shadow-sm` / `-md` / `-lg` |
 | `radius-sm` / `-md` / `-lg` | `radius-sm` / `-md` / `-lg` |
-| `tint-1` / `tint-2` | `tint-1` / `tint-2` surface |
+| `bg/brand` / `surface/brand` | `surface-brand` |
+| `bg/subtle` / `surface/subtle` | `surface-subtle` |
+| `bg/inverse` / `surface/inverse` | `surface-inverse` |
+| `bg/default` / `surface/default` | `surface-default` |
+| `button/primary` + bg | `button-primary-bg` |
+| `button/secondary` + bg | `button-secondary-bg` |
+| `button/highlight` + bg | `button-highlight-bg` |
+| `button/*` + hover | `button-*-bg-hover` |
+| `button/*` + text | `button-*-text` |
 
 ### Value-Type Fallback
 
-When keyword matching is inconclusive: button bg → `color-cta`, page bg → `color-bg-page`, card bg → `color-bg-surface`, dark text → `color-text-primary`, largest font-size → `font-size-display`, section padding → `section-padding-y`, container max-width → `content-max-width`, small radius (2–6px) → `radius-sm`, medium (8–16px) → `radius-md`.
+When keyword matching is inconclusive: primary action button bg → `button-primary-bg`, brand/identity button bg → `button-secondary-bg`, accent/promo button bg → `button-highlight-bg`, page bg → `color-bg-page`, card bg → `color-bg-surface`, dark text → `color-text-primary`, largest font-size → `font-size-display`, section padding → `section-padding-y`, container max-width → `content-max-width`, small radius (2–6px) → `radius-sm`, medium (8–16px) → `radius-md`, pill/rounded → `radius-full`.
 
 **Ambiguous matches:** Don't guess → leave `{PLACEHOLDER}` with comment `/* ambiguous: {name}: {value} */`.
 
@@ -361,7 +399,11 @@ After merging, produce source attribution: token → value → source → confid
 | `section-padding-y` | Medium | `space-2xl` |
 | `color-text-primary` | Medium | `#1A1A1A` |
 | `color-bg-page` | Medium | `#FFFFFF` |
-| `tint-*` colors | Medium | No tinted sections |
+| `surface-brand` / `surface-inverse` | High | Stop — ask user (key surfaces for page rhythm) |
+| `surface-subtle` / `surface-brand-subtle` | Medium | Derive light tint from `color-primary` at 5–8% opacity |
+| `button-primary-bg` | High | Fall back to `color-cta` if available |
+| `button-secondary-bg` | Medium | Fall back to `color-primary` |
+| `button-highlight-bg` | Medium | Omit highlight style — use Primary + Secondary only |
 | Spacing scale | Low | Derive from available values |
 | `shadow-*` | Low | `shadow-none` |
 | Semantic colors | Low | #2E7D32 / #F57C00 / #C62828 / #1565C0 |

@@ -135,7 +135,7 @@ section.paddingLeft = {SIDE_PADDING};     // Centers content at max-width
 section.paddingRight = {SIDE_PADDING};
 section.itemSpacing = {SPACE_LG};
 
-// Section background (tinted or white)
+// Section background (surface token — brand, subtle, inverse, default, etc.)
 section.fills = [{ type: 'SOLID', color: { r: {R}, g: {G}, b: {B} } }];
 
 return {
@@ -273,7 +273,7 @@ grid.layoutSizingHorizontal = "FILL";
 await figma.loadFontAsync({ family: "{BODY_FONT}", style: "Bold" });
 
 const button = figma.createFrame();
-button.name = "Button: Primary CTA";
+button.name = "Button: Primary";  // or "Button: Secondary", "Button: Highlight", "Button: Outline", "Button: Outline-inverse"
 button.layoutMode = "HORIZONTAL";
 button.primaryAxisSizingMode = "AUTO";  // Hug text width
 button.counterAxisSizingMode = "AUTO";  // Hug text height
@@ -430,7 +430,7 @@ return { components: results, count: results.length };
 // Import by key (from search_design_system results)
 const component = await figma.importComponentByKeyAsync("{COMPONENT_KEY}");
 const instance = component.createInstance();
-instance.name = "Button: Primary CTA";
+instance.name = "Button: Primary";
 
 // Append BEFORE setting sizing
 {PARENT_NODE}.appendChild(instance);

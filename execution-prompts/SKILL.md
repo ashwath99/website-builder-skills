@@ -1,7 +1,7 @@
 ---
 name: execution-prompts
 description: Master prompt templates for executing the landing page pipeline through AI coding agents. Contains Mode A/B/C templates, shared preamble, Page Blueprint format, prompt modifiers, and validation checklists. Use when starting any execution mode, writing agent prompts, or validating output.
-version: "5.3.0"
+version: "5.4.0"
 ---
 
 # Agent Execution Prompt — Master Templates
@@ -124,8 +124,11 @@ Fallback applied: yes/no (original: {font})
 | text-secondary | {HEX} | {R} | {G} | {B} |
 | bg-page | {HEX} | {R} | {G} | {B} |
 | bg-surface | {HEX} | {R} | {G} | {B} |
-| tint-1-surface | {HEX} | {R} | {G} | {B} |
-| tint-1-border | {HEX} | {R} | {G} | {B} |
+| surface-brand | {HEX} | {R} | {G} | {B} |
+| surface-subtle | {HEX} | {R} | {G} | {B} |
+| surface-inverse | {HEX} | {R} | {G} | {B} |
+| button-primary-bg | {HEX} | {R} | {G} | {B} |
+| button-secondary-bg | {HEX} | {R} | {G} | {B} |
 
 ## Spacing
 Section padding Y: {N} | Grid gutter: {N} | Card padding: {N} | Content max-width: {N}
@@ -134,9 +137,9 @@ Section padding Y: {N} | Grid gutter: {N} | Card padding: {N} | Content max-widt
 Shadow MD: blendMode NORMAL, offset 0/{N}, radius {N} | Radius MD: {N}px
 
 ## Section Plan
-| # | Type | Layout | Tint | Component | Min-H |
+| # | Type | Layout | Surface | Component | Min-H |
 |---|---|---|---|---|---|
-| 1 | Hero | split-50 | none | Hero: Split Image | 500 |
+| 1 | Hero | split-50 | brand | Hero: Split Image | 500 |
 | ... | ... | ... | ... | ... | ... |
 
 ## Batching

@@ -1,7 +1,7 @@
 ---
 name: figma-frame-builder
 description: Generates and pushes Figma design frames from design specs using the remote MCP server. Handles frame structure, layer naming, content population, design system reuse, and self-healing verification. Use when creating Figma frames from content briefs (Mode A) or escalating blueprints to Figma.
-version: "5.3.0"
+version: "5.4.0"
 ---
 
 # Figma Capture — Frame Generation
@@ -146,7 +146,7 @@ Pattern: `{Type}: {Label}` — every layer must have a type prefix.
 | `CTA` / `FAQ` / `Pricing` | `CTA: Closing` |
 | `Text` | `Text: H1`, `Text: Body` |
 | `Image` | `Image: Hero Screenshot` |
-| `Button` | `Button: Primary CTA` |
+| `Button` | `Button: Primary`, `Button: Secondary`, `Button: Highlight`, `Button: Outline` |
 
 Fabricated content: append `[placeholder]` — e.g., `Testimonial: Jane Doe [placeholder]`
 
@@ -170,7 +170,7 @@ Use actual brief copy, not Lorem ipsum. Missing text → red `[MISSING: {what}]`
 
 ### Design Tokens
 
-Apply all values from `design-tokens`. CTA buttons use `color-cta` (not `color-primary`). If Trend Adaptation Brief is active, apply its overrides.
+Apply all values from `design-tokens`. Use 5 button styles from `design-tokens` §8: Primary (`button-primary-bg`), Secondary (`button-secondary-bg`), Highlight (`button-highlight-bg`), Outline, Outline-inverse. Section backgrounds use semantic surfaces from §2.5. If Trend Adaptation Brief is active, apply its overrides.
 
 ### Design System Reuse
 

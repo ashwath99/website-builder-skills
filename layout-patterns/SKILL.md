@@ -1,7 +1,7 @@
 ---
 name: layout-patterns
 description: Page layout system for all marketing website page types. Defines section layout types (split, sidebar, grid, bento, timeline, etc.), page type inference from content signals, and assembly logic for arranging sections into full pages. Use when identifying the page type from a brief, selecting layout types for sections, or assembling a complete page structure.
-version: "5.0.6"
+version: "5.4.0"
 ---
 
 # Layout Patterns — Page Layout System
@@ -67,31 +67,54 @@ All page content sits within a column grid constrained by a max content width.
 | Content groups within a section | `space-xl` | Between heading block and content block |
 | Components within a group | `space-lg` | Between cards, between rows |
 
-### 2.2 — Tinted Section Alternation
+### 2.2 — Surface Assignment by Section Purpose
 
-Tinted backgrounds create visual separation between sections without borders or dividers.
+Section backgrounds use **semantic surfaces** from `design-tokens` §2.5. The builder picks a surface based on what the section *means*, not where it falls on the page.
 
-**Rules:**
-- Tinted and untinted sections alternate down the page
-- Never place two tinted sections adjacent to each other
-- Never place three or more untinted sections in a row
-- The hero section is always untinted (or uses its own background independent of the tint system)
-- The closing CTA may use a tinted background or a distinct brand-colored background
+**Available surfaces:** Brand, Brand Strong, Subtle, Brand Subtle, Inverse, Default
+
+**Assignment by section type:**
+
+| Section Type | Recommended Surface | Rationale |
+|---|---|---|
+| Hero (bold/branded) | `surface-brand`, `surface-inverse` | High-impact opening statement |
+| Hero (image-led) | `surface-default` + background image | Image carries the weight |
+| Trust signals / logos | `surface-subtle`, `surface-brand-subtle` | Light tint groups logos visually |
+| Feature overview / grid | `surface-default`, `surface-subtle` | Content is the focus |
+| Value props / how it works | `surface-subtle`, `surface-brand-subtle` | Gentle visual break |
+| Statistics / metrics | `surface-brand`, `surface-brand-strong` | Bold surface draws attention |
+| Social proof / testimonials | `surface-subtle`, `surface-default` | Subtle differentiation |
+| Pricing | `surface-default`, `surface-subtle` | Clean; use `surface-brand` for highlighted tier card only |
+| FAQ | `surface-subtle`, `surface-default` | Low-emphasis section |
+| Closing CTA | `surface-brand`, `surface-brand-strong`, `surface-inverse` | High-impact — match or complement hero |
+| Footer | `surface-inverse` | Dark footer is standard |
+
+**Alternation rules:**
+- Never place two of the same surface adjacent
+- **Default** and **Subtle/Brand Subtle** alternate for the main page body
+- **Brand** and **Inverse** are reserved for high-impact sections (hero, CTA, pricing highlight) — max 2–3 per page
+- **Brand Strong** is used sparingly — max 1–2 per page
+- Use **Subtle** vs **Brand Subtle** to avoid repeating the same tint when adjacent light sections are needed
 
 **Pattern example:**
 ```
-Hero          → untinted (own background)
-Section 2     → tinted (tint-1)
-Section 3     → untinted
-Section 4     → tinted (tint-2)
-Section 5     → untinted
-Closing CTA   → tinted (tint-1 or brand background)
+Hero              → surface-brand (bold opening)
+Trust Signals     → surface-subtle (light break)
+Feature Overview  → surface-default (clean content)
+Value Pillars     → surface-brand-subtle (alternate light tint)
+Feature Grid      → surface-default
+Integrations      → surface-subtle
+Why Choose Us     → surface-default
+Pricing           → surface-brand-subtle
+Testimonials      → surface-default
+Closing CTA       → surface-inverse (dark closing impact)
 ```
 
-**Tint assignment:** Tints from `design-tokens` are assigned in order. If more tinted sections exist than available tint pairs, cycle back to tint-1.
+**Text color on surfaces:** Brand/Brand Strong/Inverse → `color-text-inverse` (white). Default/Subtle/Brand Subtle → `color-text-primary`.
 
-→ For tint color values: see `design-tokens` Section 2.5
-→ For HTML tint class naming: see `html-generator`
+→ For surface token values: see `design-tokens` §2.5
+→ For surface CSS implementation: see `css-js-generator`
+→ For HTML surface class naming: see `html-generator`
 
 ### 2.3 — Visual Weight Pacing
 

@@ -1,21 +1,20 @@
-# Website Builder Skills v5.3
+# Website Builder Skills v5.4
 
 A modular skill file system that enables AI agents to convert marketing content briefs into Figma design frames and/or production-ready landing page code.
 
 Built for **Claude Code**, **Cursor AI**, **VS Code / GitHub Copilot**, **Antigravity (Google)**, **Codex CLI**, and **Gemini CLI**.
 
-> **Current version:** 5.3.0 — Compression release. All major skill files compressed 40–74% to improve builder signal-to-noise ratio. Three new features added.
+> **Current version:** 5.4.0 — Semantic Surface Model + 5 Button Styles. Section backgrounds assigned by purpose, not position. Button styles aligned to Figma Design System.
 
 ---
 
-## What's New in v5.3
+## What's New in v5.4
 
-- **40–74% compression** across 6 major skill files — removes prose explanations, keeps all code blocks, tables, and rules. Addresses the "docs ceiling" where builders cherry-pick from long files.
-- **Direct CSS file source** (`token-sources.md` Source 3b) — skip fetch when CSS file is provided directly.
-- **Font fallback lookup table** (`token-sources.md` §9) — geometric sans → Inter/Lato, humanist → Open Sans, serif → Merriweather, etc.
-- **Token priority levels** (`token-values.md`) — P1 (must extract), P2 (extract if available), P3 (always use default). Focuses extraction effort on the 15 tokens that matter most.
-- **Programmatic verification script** (`figma-code-patterns.md` §12) — checks section heights, grid sizing, button heights, FILL-without-autolayout, text overflow.
-- **Slim Build Card** — compressed from ~60 lines to ~30 lines based on builder feedback (only page name, frame ID, fonts, colors, and section plan were actually used).
+- **Semantic Surface Model** — 6 named surfaces (Brand, Brand Strong, Subtle, Brand Subtle, Inverse, Default) replace tint-1/2/3/4. Builders pick surfaces by section meaning, not page position. Assignment table maps section types to recommended surfaces.
+- **5 Button Styles** — Primary (filled action), Secondary (filled brand), Highlight (filled accent), Outline (ghost), Outline-inverse (ghost on dark) replace the old 3-tier CTA model. Each style has its own bg, hover, text, and sizing tokens.
+- **Surface CSS classes** — `section--brand`, `--subtle`, `--inverse`, etc. set both background and text color. Button classes: `btn--primary` through `btn--outline-inverse`.
+- **Figma DS variable mappings** — `bg/brand`, `button/primary/bg`, `button/secondary/bg`, etc. for Source 4 (Figma Design System) extraction.
+- **Updated token priority** — 18 P1 (must extract), 38 P2 (extract if available), 44 P3 (use defaults). 100 total tokens.
 
 ---
 

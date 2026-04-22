@@ -1,7 +1,7 @@
 ---
 name: html-generator
 description: Defines all HTML generation rules including semantic document structure, BEM class naming with product prefix, section markup patterns for every component type, heading hierarchy, accessibility markup, and image conventions. Use when generating index.html for any landing page.
-version: "5.0"
+version: "5.4.0"
 ---
 
 # HTML Structure — Markup Rules
@@ -146,7 +146,7 @@ All classes follow Block Element Modifier (BEM) convention with the product pref
 Every section follows this base pattern. Specific components nest inside.
 
 ```html
-<section class="{product}-{section-name} {product}-section--tinted" id="{section-id}">
+<section class="{product}-{section-name} {product}-section--{surface}" id="{section-id}">
   <div class="{product}-{section-name}__container">
     <!-- Optional: section heading block -->
     <div class="{product}-{section-name}__header">
@@ -162,7 +162,7 @@ Every section follows this base pattern. Specific components nest inside.
 ```
 
 - `__container` constrains content to `content-max-width`
-- `--tinted` modifier is added for tinted background sections
+- `--{surface}` modifier sets the section surface (e.g., `--brand`, `--subtle`, `--inverse`, `--default`). See `design-tokens` §2.5
 - `id` attribute enables in-page anchor linking
 
 ### 3.2 — Hero: Split Image
@@ -236,7 +236,7 @@ Every section follows this base pattern. Specific components nest inside.
 ### 3.6 — Feature Grid
 
 ```html
-<section class="{product}-feature-grid {product}-section--tinted" id="features">
+<section class="{product}-feature-grid {product}-section--subtle" id="features">
   <div class="{product}-feature-grid__container">
     <div class="{product}-feature-grid__header">
       <h2 class="{product}-feature-grid__title">{Section Title}</h2>

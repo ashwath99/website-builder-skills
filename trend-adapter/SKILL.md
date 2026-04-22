@@ -1,7 +1,7 @@
 ---
 name: trend-adapter
 description: Ingests external design trends and translates them into brand-safe token overrides and layout modifications. Defines 7 trend dimensions, named profiles, and competitor scan process. Use when adapting landing page designs to current visual trends, applying trend profiles, or doing competitive design analysis.
-version: "5.0.6"
+version: "5.4.0"
 ---
 
 # Trend Adaptation — Token Overrides & Layout Modifications
@@ -22,10 +22,10 @@ Before any trend is applied, these elements are locked. No trend override may to
 
 | Invariant | Value | Defined In |
 |---|---|---|
-| Primary CTA color | Per `design-tokens/token-values.md` | `design-tokens/SKILL.md` |
+| Button primary color | Per `design-tokens/token-values.md` | `design-tokens/SKILL.md` |
 | Brand font (headings) | Per `design-tokens/token-values.md` | `design-tokens/SKILL.md` |
 | Body font | Per `design-tokens/SKILL.md` | `design-tokens/SKILL.md` |
-| CTA hierarchy | Primary → Secondary → Tertiary | `design-tokens/SKILL.md` |
+| Button hierarchy | Primary → Secondary → Highlight → Outline → Outline-inverse | `design-tokens/SKILL.md` |
 | Class prefix pattern | `{product}-` | `html-generator/SKILL.md` |
 | Responsive breakpoints | 480px, 1024px | `css-js-generator/SKILL.md` |
 | Output format | `index.html`, `styles.css`, `script.js` | `css-js-generator/SKILL.md` |
@@ -226,8 +226,8 @@ For each non-default dimension value, list the exact CSS custom property changes
 --{product}-font-size-h1: 3.6rem;
 --{product}-line-height-heading: 1.1;
 --{product}-letter-spacing-heading: -0.02em;
---{product}-tint-1-surface: #f0f4f8;
---{product}-tint-1-border: #cbd5e1;
+--{product}-surface-subtle: #f0f4f8;
+--{product}-surface-brand-subtle: #e8f0fe;
 --{product}-shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
 --{product}-radius-md: 14px;
 ```

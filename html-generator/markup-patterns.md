@@ -77,7 +77,7 @@
 ### 3.13 — CTA Section
 
 ```html
-<section class="{product}-cta-section {product}-section--tinted" id="get-started">
+<section class="{product}-cta-section {product}-section--brand" id="get-started">
   <div class="{product}-cta-section__container">
     <h2 class="{product}-cta-section__title">{CTA Headline}</h2>
     <p class="{product}-cta-section__description">{Supporting text}</p>

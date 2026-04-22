@@ -6,6 +6,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.4.0] — 2026-04-22
+
+### Added
+
+- **Semantic Surface Model** (`design-tokens/SKILL.md` §2.5) — Replaced tint-1/2/3/4 numbered system with 6 semantic surfaces: Brand, Brand Strong, Subtle, Brand Subtle, Inverse, Default. Surfaces are assigned by section *purpose* (what the section means) not position (where it falls on the page).
+- **5 Button Styles** (`design-tokens/SKILL.md` §8) — Replaced 3-tier CTA model (Primary/Secondary/Tertiary) with DS-aligned 5-style system: Primary (filled action), Secondary (filled brand), Highlight (filled accent), Outline (ghost action), Outline-inverse (ghost on dark). Each style has bg, hover, text, and sizing tokens. Includes placement rules table (§8.6).
+- **Button style tokens** (`design-tokens/token-values.md` §10) — `button-primary-bg`, `button-secondary-bg`, `button-highlight-bg` + hover/text variants. P1 priority for primary and secondary bg.
+- **Surface CSS classes** (`css-js-generator/SKILL.md` §5) — `section--brand`, `--brand-strong`, `--subtle`, `--brand-subtle`, `--inverse`, `--default` modifiers with automatic text color. Button style classes: `btn--primary` through `btn--outline-inverse`.
+- **Surface assignment table** (`layout-patterns/SKILL.md` §2.2) — Section type → recommended surface mapping with rationale and alternation rules.
+- **Figma DS variable mappings** (`token-sources.md` §4) — `bg/brand`, `bg/subtle`, `bg/inverse`, `button/primary/bg`, `button/secondary/bg`, `button/highlight/bg` + hover/text paths.
+
+### Changed
+
+- **`design-tokens/SKILL.md`** — §1 CTA hierarchy updated for 5 styles. §2.5 rewritten from tints to surfaces. §3 Color Placement Map rewritten with surface-based model and multi-button hardcoded placements. §8 fully rewritten for 5 button styles. §4 subsection numbering fixed (was 3.x, now 4.x). Version bumped to 5.4.0.
+- **`design-tokens/token-values.md`** — §5 replaced "Tinted Section Color Pairs" with "Section Surfaces" (6 semantic tokens, P1/P2). §10 replaced 3-tier CTA with 5 button styles + sizing tokens. Priority summary updated: 18 P1, 38 P2, 44 P3 (100 total).
+- **`design-tokens/token-sources.md`** — Track A Step 4 rewritten for surface derivation. Step 4b added for button style derivation. §4 Figma mappings expanded with surface + button paths. §8 normalization table updated. §11 gap handling updated for surfaces and button tokens.
+- **`layout-patterns/SKILL.md`** — §2.2 rewritten from "Tinted Section Alternation" to "Surface Assignment by Section Purpose" with assignment table, alternation rules, and pattern example.
+- **`css-js-generator/SKILL.md`** — §2.1 categories updated (surface, button replace tint). §2.2 `:root` block adds surface + button custom properties. §5 fully rewritten with surface modifiers + 5 button style classes + shared button base. Frontmatter description updated.
+- **`html-generator/SKILL.md`** — Section wrapper uses `--{surface}` modifier instead of `--tinted`. Feature grid example uses `--subtle`.
+- **`html-generator/markup-patterns.md`** — CTA section example uses `--brand` instead of `--tinted`.
+- **`execution-prompts/SKILL.md`** — Build Card template: tint rows replaced with surface + button tokens. Section Plan table: "Tint" column → "Surface".
+- **`execution-prompts/prompt-templates.md`** — Code output checklist updated for button tokens and surface modifiers.
+- **`figma-frame-builder/SKILL.md`** — Button naming updated for 5 styles. Token application note updated for surfaces + button styles.
+- **`figma-frame-builder/figma-code-patterns.md`** — Section background comment updated. Button naming updated from "Primary CTA" to style-based naming.
+- **`trend-adapter/SKILL.md`** — Invariant table updated for button hierarchy. Example override uses surface tokens instead of tints.
+- **`master-reference/SKILL.md`** — Design System Standards table adds button styles (5) and section surfaces (6) rows.
+
+### Why
+
+The v5.3 Mode A execution report (8/10) identified two structural gaps: (1) tint-1/2/3/4 is position-based and arbitrary — builders don't know *why* a section gets tint-2 vs tint-3; (2) the 3-tier CTA model doesn't match real design systems that separate brand color from action color. The user created a Figma Design System (UEMS Website DS) with semantic surface names and 5 button styles, and this release aligns all skill files to that model. Surfaces are chosen by meaning (Brand = bold identity, Inverse = dark impact, Subtle = light break), and button styles separate the CTA action color from the brand identity color.
+
+---
+
 ## [5.3.0] — 2026-04-16
 
 ### Added
