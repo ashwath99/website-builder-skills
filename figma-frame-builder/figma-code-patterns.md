@@ -146,6 +146,56 @@ return {
 
 ---
 
+## 3b — Hero Split-50 Template
+
+Creates a hero section with two **equal-width** columns. Both columns use `FIXED` sizing at exactly 50% of the content width to prevent the visual column from collapsing when the text column grows.
+
+```javascript
+// Inside a section created via §3...
+const heroRow = figma.createFrame();
+heroRow.name = "Hero: Split Row";
+heroRow.layoutMode = "HORIZONTAL";
+heroRow.primaryAxisSizingMode = "AUTO";
+heroRow.counterAxisSizingMode = "AUTO";
+heroRow.itemSpacing = SPACING.gridGutter;
+section.appendChild(heroRow);
+heroRow.layoutSizingHorizontal = "FILL";
+
+const COLUMN_WIDTH = Math.floor((SPACING.contentMaxWidth - SPACING.gridGutter) / 2);
+
+// Left column — text content
+const colLeft = figma.createFrame();
+colLeft.name = "Hero: Text Column";
+colLeft.layoutMode = "VERTICAL";
+colLeft.primaryAxisSizingMode = "AUTO";
+colLeft.counterAxisSizingMode = "FIXED";  // FIXED width — prevents expansion
+colLeft.resize(COLUMN_WIDTH, 100);
+colLeft.itemSpacing = 16;
+colLeft.fills = [];
+heroRow.appendChild(colLeft);
+// Do NOT set layoutSizingHorizontal = "FILL" — keep FIXED width
+
+// Right column — visual / image
+const colRight = figma.createFrame();
+colRight.name = "Hero: Visual Column";
+colRight.layoutMode = "VERTICAL";
+colRight.primaryAxisSizingMode = "AUTO";
+colRight.counterAxisSizingMode = "FIXED";  // FIXED width — prevents collapse
+colRight.resize(COLUMN_WIDTH, 100);
+colRight.primaryAxisAlignItems = "CENTER";
+colRight.counterAxisAlignItems = "CENTER";
+colRight.fills = [];
+heroRow.appendChild(colRight);
+
+// Add text content to colLeft, image placeholder to colRight...
+```
+
+**Key rule:** Both columns are `counterAxisSizingMode = "FIXED"` at an explicit pixel width. Never use `layoutSizingHorizontal = "FILL"` on both — that causes the visual column to collapse when the text column's content grows.
+
+For `split-60-40`: set `colLeft` to `Math.floor(SPACING.contentMaxWidth * 0.6)` and `colRight` to `Math.floor(SPACING.contentMaxWidth * 0.4 - SPACING.gridGutter)`.
+
+---
+
 ## 4 — Create a Text Node
 
 **Font MUST be loaded before any text operation.**
@@ -245,7 +295,7 @@ desc.layoutSizingHorizontal = "FILL";
 
 ```javascript
 const grid = figma.createFrame();
-grid.name = "Feature Grid: {SECTION_NAME}";
+grid.name = "Grid: {SECTION_NAME}";  // "Grid:" prefix required — verification script §12 matches on it
 grid.layoutMode = "HORIZONTAL";
 grid.layoutWrap = "WRAP";
 grid.primaryAxisSizingMode = "FIXED";
@@ -839,13 +889,36 @@ const COLORS = {
   textSecondary: hex("{COLOR_TEXT_SECONDARY}"),
   bgPage: hex("{COLOR_BG_PAGE}"),
   bgSurface: hex("{COLOR_BG_SURFACE}"),
-  tint1Surface: hex("{COLOR_TINT1_SURFACE}"),
-  tint1Border: hex("{COLOR_TINT1_BORDER}")
+  surfaceBrand: hex("{SURFACE_BRAND}"),
+  surfaceSubtle: hex("{SURFACE_SUBTLE}"),
+  surfaceInverse: hex("{SURFACE_INVERSE}"),
+  surfaceDefault: hex("{SURFACE_DEFAULT}"),
+  buttonPrimaryBg: hex("{BUTTON_PRIMARY_BG}"),
+  buttonSecondaryBg: hex("{BUTTON_SECONDARY_BG}")
 };
+
+// --- Font Validation (Batch 0 / first batch only) ---
+// Validates font style names against available fonts. Catches "SemiBold" vs "Semi Bold".
+async function resolveFont(family, preferredStyle) {
+  const available = await figma.listAvailableFontsAsync();
+  const familyFonts = available.filter(f => f.fontName.family === family);
+  const exact = familyFonts.find(f => f.fontName.style === preferredStyle);
+  if (exact) return exact.fontName;
+  // Fuzzy match: normalize spaces and case
+  const normalized = preferredStyle.replace(/\s+/g, "").toLowerCase();
+  const fuzzy = familyFonts.find(f =>
+    f.fontName.style.replace(/\s+/g, "").toLowerCase() === normalized
+  );
+  if (fuzzy) return fuzzy.fontName;
+  // Fallback to Regular
+  const regular = familyFonts.find(f => f.fontName.style === "Regular");
+  return regular ? regular.fontName : { family, style: preferredStyle };
+}
+
 const FONTS = {
-  heading: { family: "{FONT_HEADING}", style: "{FONT_HEADING_STYLE}" },
-  body: { family: "{FONT_BODY}", style: "Regular" },
-  bodyBold: { family: "{FONT_BODY}", style: "Bold" }
+  heading: await resolveFont("{FONT_HEADING}", "{FONT_HEADING_STYLE}"),
+  body: await resolveFont("{FONT_BODY}", "Regular"),
+  bodyBold: await resolveFont("{FONT_BODY}", "Bold")
 };
 const SPACING = {
   sectionPaddingY: {SECTION_PADDING_Y},
@@ -921,7 +994,7 @@ function mkSectionHeader(parent, title, subtitle) {
 // --- Grid Helper ---
 function mkGrid(parent, columns, options = {}) {
   const grid = figma.createFrame();
-  grid.name = options.name || "Grid";
+  grid.name = options.name || "Grid: Content";  // "Grid:" prefix required for verification
   grid.layoutMode = "HORIZONTAL";
   grid.layoutWrap = "WRAP";
   grid.primaryAxisSizingMode = "FIXED";
@@ -968,14 +1041,23 @@ const issues = [];
 
 function checkText(node) {
   // Check 5: Text overflow — WIDTH_AND_HEIGHT inside auto-layout parent
-  // Exception: centered labels (WIDTH_AND_HEIGHT is intentional when
-  // parent uses counterAxisAlignItems CENTER with FIXED sizing)
   if (node.textAutoResize !== "WIDTH_AND_HEIGHT") return;
   const parent = node.parent;
   if (!parent || parent.layoutMode === "NONE") return;
+
+  // Exception 1: centered label in FIXED-width parent (logo labels, image captions)
   const isCenteredLabel = parent.counterAxisSizingMode === "FIXED"
     && parent.counterAxisAlignItems === "CENTER";
   if (isCenteredLabel) return;
+
+  // Exception 2: button label — parent is a hug container centered on both axes
+  // (buttons use primaryAxisAlignItems + counterAxisAlignItems = CENTER with AUTO sizing)
+  const isButtonLabel = parent.primaryAxisAlignItems === "CENTER"
+    && parent.counterAxisAlignItems === "CENTER"
+    && parent.primaryAxisSizingMode === "AUTO"
+    && (parent.name || "").startsWith("Button:");
+  if (isButtonLabel) return;
+
   issues.push({
     check: "TEXT_OVERFLOW", nodeId: node.id, name: node.name,
     actual: "WIDTH_AND_HEIGHT", expected: "HEIGHT",
@@ -1005,7 +1087,9 @@ function checkNode(node, path) {
   }
 
   // Check 2: Grid/card sizing must be AUTO
-  if (node.name && (node.name.startsWith("Feature Grid") || node.name.startsWith("Grid"))) {
+  // Convention: grid containers use "Grid:" prefix (e.g., "Grid: Features 3-col")
+  // Section-level frames use "Section:" prefix — never match here
+  if (node.name && node.name.startsWith("Grid:")) {
     if (node.counterAxisSizingMode !== "AUTO") {
       issues.push({
         check: "GRID_SIZING", nodeId: node.id, name: node.name,

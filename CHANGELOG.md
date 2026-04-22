@@ -6,6 +6,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.4.1] — 2026-04-22
+
+### Fixed
+
+- **`token-sources.md` §4** — Swapped DS source order: Plugin API is now Option A (preferred, no selection needed), `get_variable_defs` is Option B (requires active layer selection). Added warning about silent failure.
+- **`figma-code-patterns.md` §12** — Grid detection now uses `startsWith("Grid:")` prefix convention instead of matching on "Feature Grid" or "Grid" substrings. Eliminates false positives on section names containing "Grid".
+- **`figma-code-patterns.md` §12** — Button-label false positive in TEXT_OVERFLOW check. Added Exception 2: parent is a button-like hug container (`primaryAxisAlignItems === "CENTER"` + `counterAxisAlignItems === "CENTER"` + `name.startsWith("Button:")`).
+- **`figma-code-patterns.md` Standard Batch Preamble** — Replaced hardcoded `FONTS` const with `resolveFont()` async validator that checks `listAvailableFontsAsync()`, fuzzy-matches style names (catches "SemiBold" vs "Semi Bold"), and falls back to Regular.
+- **`figma-code-patterns.md` Standard Batch Preamble** — Updated color constants from tint-1/tint-2 to surface tokens (surfaceBrand, surfaceSubtle, surfaceInverse, surfaceDefault, buttonPrimaryBg, buttonSecondaryBg).
+
+### Added
+
+- **`figma-code-patterns.md` §3b** — Hero Split-50 template with FIXED 50% column widths. Prevents visual column collapse when text column grows. Includes split-60-40 variant note.
+- **`figma-frame-builder/SKILL.md`** — Cross-batch node-ID limitation documentation: persist only top-level section IDs; find descendants via `findAll()` inside known parents.
+- **`layout-patterns/SKILL.md` §5.1** — Over-budget merge-priority matrix for Product Landing pages. 5-level priority table: Device/OS+Integrations merge first, Trust Signals simplify last.
+- **`brief-parser/SKILL.md` Step 1a** — Large Brief Protocol for briefs >25K tokens: grep section headers, offset-read targeted ranges, dedup per-section.
+
+### Changed
+
+- **`figma-frame-builder/SKILL.md` §4** — Naming convention: `Feature Grid/Row` prefix replaced with `Grid:` prefix (`Grid: Features 3-col`). Matches verification script §12 detection.
+- **`brief-parser/SKILL.md` §3b** — Over-budget guidance now references merge-priority table in `layout-patterns §5.1`.
+
+### Why
+
+v5.4.0 Mode A execution scored 7.5/10 with 9 friction items. 8 were validated as real issues (1 was a false report — §1a already handles PAGE nodes). This patch fixes the 5 execution-template bugs (#2–4, #7 font, Standard Preamble tint refs) and adds the 3 missing structural pieces (#5 node-ID docs, #6 merge matrix, #8 brief protocol, #9 hero template). Target: reduce wasted Figma calls from ~4/12 to ≤1/12.
+
+---
+
 ## [5.4.0] — 2026-04-22
 
 ### Added

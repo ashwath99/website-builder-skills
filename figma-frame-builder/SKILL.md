@@ -57,6 +57,12 @@ return { createdNodeIds: [...], mutatedNodeIds: [], summary: "..." };
 ```
 Store returned IDs between calls. Never find nodes by name — use stored IDs only.
 
+**Limitation:** Only persist **top-level section IDs** (direct children of the main frame) in the Build Card. Descendant node IDs (cards, buttons, text nodes inside sections) may return `null` from `getNodeById()` in follow-up batches. To modify descendants, look up the parent section by its stored ID, then use `findAll()` or `findOne()` within that parent:
+```javascript
+const section = figma.getNodeById("{SECTION_ID}");
+const target = section.findOne(n => n.name === "Button: Primary");
+```
+
 ### Batching
 
 ~50K char limit per call. Target 2–3 sections per batch.
@@ -137,9 +143,9 @@ Pattern: `{Type}: {Label}` — every layer must have a type prefix.
 
 | Prefix | Examples |
 |---|---|
-| `Section` | `Section: Hero`, `Section: Feature Grid` |
+| `Section` | `Section: Hero`, `Section: Features` |
+| `Grid` | `Grid: Features 3-col`, `Grid: Pricing Plans` |
 | `Feature Card` | `Feature Card: Real-time Alerts` |
-| `Feature Grid/Row` | `Feature Grid: Core Features` |
 | `Tab Panel` | `Tab Panel: Advanced Features` |
 | `Testimonial` | `Testimonial: Jane Doe, Acme Corp` |
 | `Logo Bar` / `Metrics Bar` | `Logo Bar: Trusted By` |

@@ -180,14 +180,15 @@ Merge Track A + Track B. Flag gaps. Limitation: CSS misses image-embedded colors
 **Step 2 — If 0 local variables, try library:**
 
 ```
-Option A (MCP — preferred):
-1. get_variable_defs on any DS frame → variable bindings
-2. search_design_system("color"), ("spacing"), ("typography") → library values
-
-Option B (Plugin API — fallback):
+Option A (Plugin API — preferred, no selection needed):
 1. figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()
 2. For each: getLibraryVariableCollectionById(key)
 3. Resolve aliases per figma-code-patterns.md §11.2
+
+Option B (MCP — requires a node selection in Figma UI):
+1. get_variable_defs on any DS frame → variable bindings
+2. search_design_system("color"), ("spacing"), ("typography") → library values
+⚠️ get_variable_defs fails silently if no layer is selected. Use Option A first.
 ```
 
 **Step 3:** Library values override local on conflict. **Step 4:** Flatten to `name: value` pairs. **Step 5:** Normalize (Section 8). **Step 6:** Font check (Section 9). **Step 7:** Bind CSS properties to Figma variables in Mode A. **Step 8:** Flag gaps.

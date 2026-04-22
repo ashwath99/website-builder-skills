@@ -275,6 +275,20 @@ Once the page type is inferred, the agent assembles the page by selecting applic
 - FAQ appears after all feature sections
 - Closing CTA is always last
 
+**Over-budget merge priority** (when brief produces more sections than the max):
+
+Drop or merge in this order — highest number = first to cut:
+
+| Priority | Action | Sections |
+|---|---|---|
+| 5 (cut first) | Merge into adjacent section | Device/OS support + Integration/Ecosystem → combined "Platform" section |
+| 4 | Merge into adjacent section | Stats/Metrics + Testimonials → combined "Social Proof" section |
+| 3 | Drop entirely | Feature Deep-Dive (if Feature Overview covers enough) |
+| 2 | Drop entirely | Use Cases (if features imply use cases) |
+| 1 (cut last) | Simplify, never drop | Trust Signals → reduce to inline logo row within Hero or Feature Overview |
+
+**Rules:** Never drop Hero, Feature Overview, or Closing CTA. Never merge FAQ into another section (accordion needs its own container). Pricing Snapshot is kept if the brief includes pricing data.
+
 ---
 
 ### 5.2 — Feature Detail Page

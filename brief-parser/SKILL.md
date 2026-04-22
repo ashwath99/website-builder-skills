@@ -20,6 +20,17 @@ A marketing document (.txt, .md, .docx, .pdf) with raw content for a landing pag
 
 Produce a flat list of every content element: headlines (H1/H2/taglines), body paragraphs, feature items (name + description), CTA text, testimonials/quotes, statistics/metrics, logo/brand references, image references, meta content (title, description, keywords). Do not reorganize yet.
 
+### Step 1a: Large Brief Protocol
+
+If the brief exceeds ~25K tokens (typical for scraped multi-page sites), do NOT attempt to read it in one pass. Instead:
+
+1. **Grep for section headers** — `grep -n "^#{1,3} \|^## " {brief}` to get a structural outline with line numbers
+2. **Offset-read targeted ranges** — use the line numbers to read each section individually (e.g., lines 1–80 for hero, 81–200 for features)
+3. **Dedup per-section** — run Step 1b on each section's content as you read it, not on the whole brief at once
+4. **Build the inventory incrementally** — append to the flat element list after each section read
+
+**Detection:** Brief file > 800 lines or > 25K characters → trigger this protocol. If using `Read`, stay within the tool's line limit per call.
+
 ### Step 1b: Content Deduplication
 
 For scraped website briefs, the same content appears in nav, hero, features, footer. Without dedup, features map to 3+ sections.
@@ -122,7 +133,7 @@ Briefs (especially scraped) often produce 12–15+ sections. This constrains the
 | Event / Webinar | 5–7 | 9 |
 | All others | 5–8 | 10 |
 
-Over max → merge related sections or drop lowest-priority. Report original vs final count.
+Over max → merge or drop using the merge-priority table in `layout-patterns/SKILL.md` §5.1. Report original vs final count.
 
 #### Feature Prioritization
 
