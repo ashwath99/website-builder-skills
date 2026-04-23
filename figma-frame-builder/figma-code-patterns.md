@@ -803,6 +803,78 @@ return {
 
 **Usage:** When `font-heading` resolves to "ZohoPuvi" (unavailable), check if a "Fallback" mode exists that resolves to "Lato" or another available font.
 
+### 11.5 — Bind Variables to Nodes (setBoundVariable)
+
+After creating nodes with resolved hex values, bind them to DS variables so the frame stays in sync when the DS changes. This is Step 7 of `token-sources.md` §4.
+
+**When to use:** Always in Mode A when tokens come from Source 4 (Figma DS). Skip if tokens come from CSS/URL/screenshot (no variables to bind).
+
+```javascript
+// Step 1: Build a variable lookup map (run once per session)
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const varMap = {};  // { "bg/brand": Variable, "button/primary/bg": Variable, ... }
+
+for (const coll of collections) {
+  for (const varId of coll.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(varId);
+    varMap[v.name] = v;
+  }
+}
+
+// Step 2: Bind fills (section backgrounds, button backgrounds)
+function bindFill(node, variableName) {
+  const variable = varMap[variableName];
+  if (!variable) return;  // Variable not found — keep hex fallback
+  node.setBoundVariable('fills', 0, variable);
+}
+
+// Step 3: Bind text color
+function bindTextColor(node, variableName) {
+  const variable = varMap[variableName];
+  if (!variable) return;
+  node.setBoundVariable('fills', 0, variable);  // Text fills use same API
+}
+
+// Step 4: Bind strokes (outline buttons, card borders)
+function bindStroke(node, variableName) {
+  const variable = varMap[variableName];
+  if (!variable) return;
+  node.setBoundVariable('strokes', 0, variable);
+}
+
+// --- Usage examples ---
+// Section background
+bindFill(heroSection, "bg/brand");
+
+// Button background
+bindFill(primaryBtn, "button/primary/bg");
+
+// Button text
+bindTextColor(btnLabel, "button/primary/text");
+
+// Outline button border
+bindStroke(outlineBtn, "button/primary/bg");
+
+// Text node
+bindTextColor(headingNode, "text/primary");
+```
+
+**Binding order:** Create node → set hex fill (visual fallback) → bind variable (DS link). The hex fill ensures the frame renders even if the variable fails to bind.
+
+**Library variables:** If the DS is a library (not local), variables must be imported first:
+```javascript
+const libCollections = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+for (const libColl of libCollections) {
+  const imported = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(libColl.key);
+  for (const libVar of imported) {
+    const local = await figma.variables.importVariableByKeyAsync(libVar.key);
+    varMap[libVar.name] = local;
+  }
+}
+```
+
+**Budget note:** Variable binding adds ~1 `use_figma` call. Run as a dedicated binding batch after all sections are built, using stored section IDs + `findAll()` to locate nodes.
+
 ---
 
 ## Quick Reference — Correct Operation Order
@@ -1051,12 +1123,17 @@ function checkText(node) {
   if (isCenteredLabel) return;
 
   // Exception 2: button label — parent is a hug container centered on both axes
-  // (buttons use primaryAxisAlignItems + counterAxisAlignItems = CENTER with AUTO sizing)
   const isButtonLabel = parent.primaryAxisAlignItems === "CENTER"
     && parent.counterAxisAlignItems === "CENTER"
     && parent.primaryAxisSizingMode === "AUTO"
     && (parent.name || "").startsWith("Button:");
   if (isButtonLabel) return;
+
+  // Exception 3: hug container (chips, tags, badges, inline labels, bullet markers)
+  // When parent hugs on BOTH axes, WIDTH_AND_HEIGHT is correct — text sizes the parent
+  const isHugContainer = parent.primaryAxisSizingMode === "AUTO"
+    && parent.counterAxisSizingMode === "AUTO";
+  if (isHugContainer) return;
 
   issues.push({
     check: "TEXT_OVERFLOW", nodeId: node.id, name: node.name,

@@ -191,7 +191,7 @@ Option B (MCP — requires a node selection in Figma UI):
 ⚠️ get_variable_defs fails silently if no layer is selected. Use Option A first.
 ```
 
-**Step 3:** Library values override local on conflict. **Step 4:** Flatten to `name: value` pairs. **Step 5:** Normalize (Section 8). **Step 6:** Font check (Section 9). **Step 7:** Bind CSS properties to Figma variables in Mode A. **Step 8:** Flag gaps.
+**Step 3:** Library values override local on conflict. **Step 4:** Flatten to `name: value` pairs. **Step 5:** Normalize (Section 8). **Step 6:** Font check (Section 9). **Step 6b:** Text hierarchy proximity check (`design-tokens/SKILL.md` §3.4) — flag if text-primary and text-secondary are near-identical. **Step 7:** Bind CSS properties to Figma variables in Mode A (`figma-code-patterns.md` §11.5). **Step 8:** Flag gaps.
 
 **Common Figma variable → token mappings:**
 

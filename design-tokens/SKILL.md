@@ -180,6 +180,24 @@ Every color placement — hardcoded or AI-flexible — must satisfy WCAG 2.1 AA 
 5. If all options fail → adjust opacity or lightness to meet ratio, flag with `/* WCAG-adjusted */`
 6. Never skip validation — every color pair in the final output must pass
 
+**Text hierarchy proximity check (pre-build):**
+
+After extracting `color-text-primary` and `color-text-secondary`, verify they are visually distinguishable. If too similar, the heading/body hierarchy is invisible.
+
+```
+Approximate perceptual distance (simplified):
+  ΔR = R1 - R2,  ΔG = G1 - G2,  ΔB = B1 - B2
+  distance = sqrt(ΔR² + ΔG² + ΔB²)
+
+  distance < 30  → FLAG: "text-primary and text-secondary are near-identical
+                    (distance {N}). Hierarchy will be invisible. Confirm with
+                    user or lighten text-secondary by +40 on lightness."
+  distance 30–60 → OK but subtle — note in Build Card
+  distance > 60  → good separation
+```
+
+Run this check once after token extraction, before any frame creation. If flagged, ask the user before proceeding.
+
 ---
 
 ## 4 — Typography Scale

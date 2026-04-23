@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.4.2] — 2026-04-23
+
+### Added
+
+- **`figma-code-patterns.md` §11.5 — `setBoundVariable()` template** — Complete code pattern for binding Figma DS variables to node fills, text colors, and strokes after frame creation. Includes library variable import path and budget note. Implements the previously-documented-but-unimplemented Step 7 of `token-sources.md` §4.
+- **`design-tokens/SKILL.md` §3.4 — Text hierarchy proximity check** — Pre-build validation: if `color-text-primary` and `color-text-secondary` have RGB distance < 30, flag as DS anomaly before building. Prevents invisible heading/body hierarchy (e.g., `#091228` vs `#222222`).
+- **`token-sources.md` §4 — Step 6b** — Text hierarchy proximity check added to post-extraction pipeline between font check and variable binding.
+
+### Fixed
+
+- **`figma-code-patterns.md` §12 — TEXT_OVERFLOW Exception 3** — Added hug-container exception: when parent has `primaryAxisSizingMode === "AUTO" && counterAxisSizingMode === "AUTO"`, WIDTH_AND_HEIGHT is correct (text sizes the parent). Covers chips, tags, badges, inline labels, bullet markers. Eliminates ~50+ false positives per verification run.
+
+### Why
+
+v5.4.1 Mode A scored 8.0/10. Three items identified as actionable: (1) `setBoundVariable()` was referenced in token-sources Step 7 but had no code template — frames looked correct but drifted from DS changes; (2) verification script flagged 58 TEXT_OVERFLOW false positives from hug containers — the exception set was still too narrow after v5.4.1's button fix; (3) `text/secondary = #222222` was near-identical to `text/primary = #091228` but wasn't flagged — the skill had no proximity check between text hierarchy levels.
+
+---
+
 ## [5.4.1] — 2026-04-22
 
 ### Fixed
