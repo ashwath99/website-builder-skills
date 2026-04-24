@@ -182,8 +182,24 @@ Uses the same markup pattern as Section 3.9 (Accordion) with block name `{produc
 | Rule | Detail |
 |---|---|
 | Path format | Always `./assets/{filename}` |
-| Lazy loading | Add `loading="lazy"` on all images below the fold |
-| Hero images | No lazy loading (above the fold) |
 | Width/height attributes | Include `width` and `height` attributes to prevent layout shift |
 | Format preference | SVG for icons/logos, PNG for screenshots, JPG for photos |
 | Uncertain mappings | Add `<!-- TODO: verify asset -->` comment above the `<img>` tag |
+
+### Lazy Loading (Mandatory)
+
+**All `<img>` tags below the fold MUST have `loading="lazy"`.**
+
+```html
+<!-- Hero (above fold) — NO lazy loading -->
+<img src="./assets/hero-screenshot.png" alt="..." width="720" height="450" class="{product}-hero__image">
+
+<!-- Below fold — ALWAYS lazy load -->
+<img src="./assets/feature-dashboard.png" alt="..." width="560" height="350" loading="lazy" class="{product}-feature-row__image">
+```
+
+**Rules:**
+- Hero section images: never lazy (above the fold, must render immediately)
+- All other section images: always `loading="lazy"`
+- Logo bar images: `loading="lazy"` (even though they may be near the fold — browser handles the threshold)
+- Placeholder images (`[IMAGE NEEDED]`): still add `loading="lazy"` so the attribute is in place when real assets swap in

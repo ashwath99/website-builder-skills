@@ -1,7 +1,7 @@
 ---
 name: figma-code-extractor
 description: "Converts finalized Figma frames into production HTML/CSS/JS through a 4-phase pipeline: inspect, plan, generate, self-review. Handles spec extraction, asset export, variable-first token mapping, and Code Connect integration. Use when generating code from Figma designs (Mode B)."
-version: "5.0"
+version: "5.4.3"
 ---
 
 # Figma to Code — Inspection & Conversion Pipeline
@@ -131,20 +131,68 @@ From the `get_design_context` output, identify:
 | Section types | Layer name prefixes (e.g., `Section: Hero`, `Section: Features`) or visual analysis |
 | Component types | Component instance names from `search_design_system` results or layer prefixes |
 | Section order | Top-to-bottom order of child frames |
-| Tinted sections | Background fill colors / variable bindings on section frames |
+| Section surfaces | Background fill colors / variable bindings → map to semantic surface tokens (brand, subtle, inverse, default) |
 
 ### Step 5: Extract Design Specs Per Section
 
-For each section, capture from the `get_design_context` and `get_variable_defs` output:
+> **CRITICAL RULE — Inspect Fresh, Discard Prior Knowledge**
+>
+> The Figma frame is the **sole source of truth**. If this frame was built in Mode A during the same session, **discard all Build Card values, section plans, and token decisions from that session**. Re-extract every spec from the frame itself using `get_design_context`. Build Card shortcuts introduce drift — values may have changed during verification passes, manual edits, or DS updates since Mode A ran.
+
+**Per-section inspection workflow:**
+
+After Step 4 identifies section boundaries, call `get_design_context` once per section using its node ID. Do not rely on the top-level frame call alone — it returns summary data that omits per-component detail.
+
+```
+For each section identified in Step 4:
+
+  1. Get the section's node ID from the top-level get_design_context output
+     → Each top-level child frame has a node-id in the structured response
+
+  2. Call get_design_context with that section's node ID
+     → Returns: full layout tree, spacing, colors, typography, component refs for that section only
+
+  3. Record the per-section spec sheet (see table below)
+
+  4. If the section contains variable-bound tokens, cross-reference with
+     the use_figma variable extraction from Step 2
+     → Map variable names to design-tokens/SKILL.md tokens
+
+  5. Flag any value that doesn't match a known DS token
+     → Add to deviation candidates for Phase 4
+```
+
+**Example call sequence for a 7-section page:**
+
+```
+# Step 1 already ran — top-level get_design_context returned section list:
+#   Section: Hero         → node-id: 262:45
+#   Section: Features     → node-id: 262:112
+#   Section: How It Works → node-id: 262:198
+#   Section: Tabs         → node-id: 262:267
+#   Section: Testimonials → node-id: 262:341
+#   Section: Pricing      → node-id: 262:405
+#   Section: CTA          → node-id: 262:478
+
+# Now inspect each section individually:
+get_design_context(node-id: "262:45")   → Hero specs
+get_design_context(node-id: "262:112")  → Features specs
+get_design_context(node-id: "262:198")  → How It Works specs
+...and so on for each section
+```
+
+**Per-section spec sheet — capture for each section:**
 
 | Spec | What to Record |
 |---|---|
+| **Surface** | Background fill variable or hex → map to semantic surface token (brand, subtle, inverse, default) |
 | **Layout** | Column count, alignment, gap between items, content width |
 | **Spacing** | Padding (top, right, bottom, left), margins, gaps — prefer variable names over raw values |
 | **Typography** | Font family, size, weight, line-height, color for each text element — prefer style references |
-| **Colors** | Background fills, text colors, border colors, CTA colors — prefer variable references |
+| **Colors** | Text colors, border colors, button colors — prefer variable references |
 | **Shadows** | Box shadows on cards and elevated elements |
 | **Border radius** | Corner radius on cards, buttons, images |
+| **Button styles** | Which button style(s) appear — map to Primary / Secondary / Highlight / Outline / Outline-inverse |
 | **Images** | Image names, dimensions, aspect ratios, file format |
 | **Interactions** | Any prototype interactions (tabs, hover states) — infer JS behavior |
 
@@ -152,7 +200,7 @@ For each section, capture from the `get_design_context` and `get_variable_defs` 
 
 **Check the project assets folder first.** The user may have pre-exported some assets.
 
-For remaining assets, use `use_figma` to export:
+For remaining assets, use `use_figma` to export (→ see `figma-code-patterns.md` §10.1 for the `exportAsync()` code template):
 
 | Asset Type | Export Format | Notes |
 |---|---|---|
@@ -272,7 +320,7 @@ Generate following all rules in `css-js-generator/SKILL.md`:
 - Variable-bound values from Figma map directly to custom property names
 - Desktop-first responsive approach
 - Media queries at 480px and 1024px breakpoints only
-- Tinted section classes using surface/border color pairs
+- Section surface modifiers using semantic surface classes (section--brand, section--subtle, etc.)
 - No hardcoded values in rulesets — everything references custom properties
 - Component styles matching Figma specs
 
@@ -309,7 +357,7 @@ Generate following all rules in `css-js-generator/SKILL.md`:
 - [ ] Variable-bound Figma values map to matching custom property names
 - [ ] Desktop-first: base styles are desktop, media queries handle smaller screens
 - [ ] Only two breakpoints: 1024px and 480px
-- [ ] Tinted sections use matched surface/border pairs from `design-tokens/SKILL.md`
+- [ ] Section surfaces use semantic surface modifiers from `design-tokens/SKILL.md` §2.5
 - [ ] No `!important` unless absolutely necessary (and documented with comment)
 
 **JS checks:**

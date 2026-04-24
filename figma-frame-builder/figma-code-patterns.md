@@ -615,6 +615,100 @@ return {
 
 ---
 
+## 10.1 — Asset Export (Mode B Phase 1 Step 6)
+
+Export images and icons from the Figma frame for use in the code output. Run as a single `use_figma` batch after section inspection.
+
+```javascript
+// === Frame-Finder Preamble ===
+const targetPage = figma.root.children.find(p => p.name === "{PAGE_NAME}");
+await figma.setCurrentPageAsync(targetPage);
+const mainFrame = figma.getNodeById("{MAIN_FRAME_ID}");
+// === End Preamble ===
+
+const exports = [];
+
+// Find all exportable nodes: IMAGE fills, named placeholder rects, icon frames
+function collectExportable(node, path) {
+  if (!node) return;
+  const fullPath = path + "/" + (node.name || node.type);
+
+  // Image fills (real images placed in Figma)
+  if (node.fills && Array.isArray(node.fills)) {
+    const hasImage = node.fills.some(f => f.type === "IMAGE" && f.visible !== false);
+    if (hasImage) {
+      exports.push({ node, path: fullPath, type: "image" });
+    }
+  }
+
+  // Named placeholder rects (labelled "[IMAGE NEEDED: ...]" or "Image: ...")
+  if (node.name && (node.name.startsWith("Image:") || node.name.includes("[IMAGE"))) {
+    exports.push({ node, path: fullPath, type: "placeholder" });
+  }
+
+  // Icon frames (small frames ≤ 64px, typically SVG-exportable)
+  if (node.type === "FRAME" && node.width <= 64 && node.height <= 64
+      && node.children && node.children.length > 0) {
+    exports.push({ node, path: fullPath, type: "icon" });
+  }
+
+  if ("children" in node && node.children) {
+    for (const child of node.children) collectExportable(child, fullPath);
+  }
+}
+
+collectExportable(mainFrame, "");
+
+// Export each node
+const results = [];
+for (const item of exports) {
+  try {
+    if (item.type === "icon") {
+      // Icons → SVG
+      const svg = await item.node.exportAsync({ format: "SVG" });
+      results.push({
+        name: item.node.name,
+        path: item.path,
+        type: "icon",
+        format: "SVG",
+        size: svg.length,
+        // SVG data returned as Uint8Array — agent writes to ./assets/icons/
+      });
+    } else {
+      // Images → PNG at 2x
+      const png = await item.node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 2 } });
+      results.push({
+        name: item.node.name,
+        path: item.path,
+        type: item.type,
+        format: "PNG@2x",
+        size: png.length,
+        // PNG data returned as Uint8Array — agent writes to ./assets/
+      });
+    }
+  } catch (e) {
+    results.push({ name: item.node.name, path: item.path, error: e.message });
+  }
+}
+
+return {
+  exported: results.filter(r => !r.error).length,
+  failed: results.filter(r => r.error).length,
+  items: results,
+  summary: results.map(r =>
+    r.error ? `✗ ${r.name}: ${r.error}` : `✓ ${r.name} (${r.format}, ${r.size} bytes)`
+  ).join('\n')
+};
+```
+
+**Output folder convention:** `./assets/` for images, `./assets/icons/` for SVG icons. File names: slugified node name (e.g., `Image: Hero Screenshot` → `hero-screenshot.png`).
+
+**Budget:** 1 `use_figma` call. Run after all section inspection is complete. If the frame has >20 exportable nodes, split into 2 batches (images first, icons second).
+
+**Placeholder-only frames:** If the frame contains only grey placeholder rects (no IMAGE fills), skip export but still log the placeholder names for the `<!-- TODO -->` comments in HTML.
+
+---
+
 ## 11 — Token Extraction Helper (Figma Variable Resolver)
 
 **Use when extracting tokens from Figma variables (Source 4).** Resolves alias chains to final values.

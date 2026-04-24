@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.4.3] — 2026-04-24
+
+### Added
+
+- **`figma-code-patterns.md` §10.1 — `exportAsync()` template** — Complete code pattern with `collectExportable()` helper that walks the frame tree, exports PNG@2x for images and SVG for icons, with budget note (1 `use_figma` call). Closes the Mode B asset-handling gap (4/10 → recoverable in a single batch).
+- **`css-js-generator/SKILL.md` §7 — Mandatory Accessibility CSS** — Three required rules: `prefers-reduced-motion: reduce` (kills all transitions/animations), `:focus-visible` with brand-primary outline, and `.{product}-skip-link` (hidden until focused). All outputs must include these.
+- **`html-generator/markup-patterns.md` §7 — Lazy loading enforcement** — Expanded from table entry to full subsection with mandatory rules: hero images never lazy (above fold), all other images always `loading="lazy"`, placeholders include the attribute for when real assets swap in.
+- **`figma-code-extractor/SKILL.md` §3 Step 5 — Per-section inspection template** — Concrete `get_design_context` call workflow: get section node IDs from top-level call, then inspect each section individually. Includes example call sequence for a 7-section page. Added critical rule: "Discard Build Card values — inspect the frame fresh."
+- **`html-generator/SKILL.md` §2 — BEM semantic-tag prohibition** — Never use `<em>`, `<strong>`, `<i>`, `<b>` as CSS styling hooks. Use `<span>` with a BEM class instead. Includes wrong/right table with common violations.
+
+### Changed
+
+- **`figma-code-extractor/SKILL.md`** — Version bumped to 5.4.3. Replaced stale "tinted section" references with semantic surface terminology throughout (Step 4, Phase 3, self-review checklist). Added cross-reference to `figma-code-patterns.md` §10.1 for asset export.
+
+### Why
+
+v5.4.1 Mode B scored 7.5/10. Five skill gaps identified: (1) asset handling scored 4/10 because `exportAsync()` was referenced but had no code template; (2) no `prefers-reduced-motion` media query — standard accessibility pattern was missing from skill output rules; (3) `loading="lazy"` was a table entry but not enforced with explicit rules; (4) builder shortcut Build Card memory instead of re-inspecting each section — skill lacked a concrete per-section workflow; (5) `<em>` was used as a styling hook for accent colors — skill had no prohibition. All five are template/rule gaps, not architectural issues.
+
+---
+
 ## [5.4.2] — 2026-04-23
 
 ### Added

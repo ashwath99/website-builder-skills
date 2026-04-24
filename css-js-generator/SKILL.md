@@ -171,11 +171,15 @@ All custom properties are declared in a `:root` block at the top of `styles.css`
    ========================================================================== */
 
 /* ==========================================================================
-   8. Responsive — Tablet (max-width: 1024px)
+   8. Accessibility
    ========================================================================== */
 
 /* ==========================================================================
-   9. Responsive — Mobile (max-width: 480px)
+   9. Responsive — Tablet (max-width: 1024px)
+   ========================================================================== */
+
+/* ==========================================================================
+   10. Responsive — Mobile (max-width: 480px)
    ========================================================================== */
 ```
 
@@ -424,5 +428,57 @@ When the bento grid layout is selected (via `trend-adapter/SKILL.md` or `variati
 ```
 
 → For bento layout rules and cell arrangement: see `layout-patterns/SKILL.md`
+
+---
+
+## 7 — Accessibility CSS (Mandatory)
+
+Every output MUST include these accessibility rules in the Accessibility section of `styles.css`:
+
+```css
+/* ==========================================================================
+   8. Accessibility
+   ========================================================================== */
+
+/* Reduced motion — disable all transitions and animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus visible — keyboard-only focus ring */
+:focus-visible {
+  outline: 2px solid var(--{product}-color-primary);
+  outline-offset: 2px;
+}
+
+/* Skip link — hidden until focused */
+.{product}-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--{product}-surface-inverse);
+  color: var(--{product}-color-text-inverse);
+  padding: 8px 16px;
+  z-index: 9999;
+  border-radius: var(--{product}-radius-sm);
+}
+.{product}-skip-link:focus {
+  top: 8px;
+}
+```
+
+**Rules:**
+- `prefers-reduced-motion` is mandatory — never ship without it
+- `:focus-visible` replaces browser defaults — must use brand primary color
+- Skip link markup goes as the first child of `<body>`: `<a href="#main-content" class="{product}-skip-link">Skip to main content</a>`
+- The `#main-content` target goes on the first `<main>` or first content section
 
 → For jQuery interaction patterns, animation standards, and code quality rules: see jquery-patterns.md

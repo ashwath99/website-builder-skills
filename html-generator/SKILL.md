@@ -1,7 +1,7 @@
 ---
 name: html-generator
 description: Defines all HTML generation rules including semantic document structure, BEM class naming with product prefix, section markup patterns for every component type, heading hierarchy, accessibility markup, and image conventions. Use when generating index.html for any landing page.
-version: "5.4.0"
+version: "5.4.3"
 ---
 
 # HTML Structure — Markup Rules
@@ -101,6 +101,18 @@ All classes follow Block Element Modifier (BEM) convention with the product pref
 - Blocks are never nested in class names: `msp-hero__cta` not `msp-hero__content__cta`
 - Maximum one level of element depth: `{block}__{element}` — if deeper nesting is needed, create a new block
 - Modifiers can apply to blocks or elements: `msp-hero--dark` (block modifier), `msp-hero__title--large` (element modifier)
+
+### Semantic Tags Are Not Styling Hooks
+
+Never use semantic HTML tags (`<em>`, `<strong>`, `<i>`, `<b>`) as CSS styling hooks. These tags carry meaning — `<em>` means emphasis, `<strong>` means importance. Using them to apply visual styles (accent colors, font changes) breaks semantics and confuses screen readers.
+
+| Wrong | Right |
+|---|---|
+| `<em>ManageEngine</em>` + CSS on `em` for accent color | `<span class="{product}-hero__title-accent">ManageEngine</span>` |
+| `<strong>99.9%</strong>` + CSS on `strong` for large font | `<span class="{product}-metrics-bar__value">99.9%</span>` |
+| `<i>icon text</i>` + CSS on `i` for icon font | `<span class="{product}-icon" aria-hidden="true"></span>` |
+
+**Rule:** When you need a styling hook inside a text node, use `<span>` with a BEM class. Reserve `<em>` and `<strong>` for content where emphasis or importance is the actual intent.
 
 ### Common Block Names
 
